@@ -28,3 +28,8 @@ libbtree has unit tests. To run all of them, in your build folder, execute
 ```
 ctest -V
 ```
+
+## How to use libbtree
+
+To include the "raw" BTree library in your own code, you can take a look at the test cases or examples under `libbtree/tests` and `libbtree/examples`, respectively.
+The basic gist is to create an object of type `DataStructureWrapper` and populate it using `insert`.
