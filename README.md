@@ -20,3 +20,11 @@ cd build
 cmake ..
 make
 ```
+
+## Testing
+
+libbtree has unit tests. To run all of them, in your build folder, execute
+
+```
+ctest -V
+```
