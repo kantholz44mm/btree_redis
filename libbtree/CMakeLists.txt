@@ -6,7 +6,7 @@ file(GLOB BTREE_SOURCES "src/*.cpp")
 add_library(btree STATIC ${BTREE_SOURCES})
 
 # we need AVX2 for fast hashing.
-target_compile_options(btree PRIVATE -mavx2)
+target_compile_options(btree PRIVATE -mavx2 -fno-exceptions)
 
 # anything that links to this lib will also need the headers.
 target_include_directories(btree PUBLIC 

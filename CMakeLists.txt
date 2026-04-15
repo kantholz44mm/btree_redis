@@ -11,10 +11,13 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 
 # Works for both GCC and Clang
-add_compile_options(-Wall -Wextra -Wpedantic -fno-exceptions)
+add_compile_options(-Wall -Wextra -Wpedantic)
 
 # Main btree library
 add_subdirectory(libbtree)
+
+# Redis server protocol
+add_subdirectory(redis_server)
 
 # 4. Create your main executable
 add_executable(${PROJECT_NAME} main.cpp)
