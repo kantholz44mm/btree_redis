@@ -21,7 +21,7 @@ CPMAddPackage(
         "BOOST_ENABLE_CMAKE ON"
         "BOOST_SKIP_INSTALL_RULES ON"
         "BUILD_SHARED_LIBS OFF"
-        "BOOST_INCLUDE_LIBRARIES container\\\;asio\\\;circular_buffer\\\;test" # Note the escapes!
+        "BOOST_INCLUDE_LIBRARIES asio\\\;endian\\\;test" # Note the escapes!
 )
 
 enable_testing()

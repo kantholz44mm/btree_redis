@@ -1,7 +1,6 @@
 #pragma once
 
 #include <boost/asio.hpp>
-#include <boost/circular_buffer.hpp>
 
 #include "resp_deserializer.h"
 #include "resp_serializer.h"

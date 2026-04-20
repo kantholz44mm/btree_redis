@@ -15,6 +15,7 @@ target_link_libraries(libbtree_unit_tests
     PRIVATE 
         btree 
         Boost::unit_test_framework
+        Boost::endian
 )
 
 # Register with CTest
