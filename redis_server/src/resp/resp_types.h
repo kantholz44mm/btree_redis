@@ -34,6 +34,9 @@ struct resp_integer_value {
 struct resp_simple_string_value {
     std::shared_ptr<std::string> value;
 };
+struct resp_error_value {
+    std::shared_ptr<std::string> message;
+};
 struct resp_bulk_string_value {
     std::shared_ptr<std::string> value;
 };
@@ -41,13 +44,15 @@ struct resp_array_value {
     std::shared_ptr<std::vector<resp_value>> value;
 };
 
-using resp_type_variant = std::variant<resp_integer_value, resp_simple_string_value, resp_bulk_string_value, resp_array_value>;
+using resp_type_variant = std::variant<resp_integer_value, resp_simple_string_value, resp_error_value, resp_bulk_string_value, resp_array_value>;
 
 class resp_value {
 public:
     static resp_value integer(int64_t value);
     static resp_value simple_string(const std::shared_ptr<std::string>& value);
     static resp_value simple_string(const std::string& value);
+    static resp_value error(const std::shared_ptr<std::string>& value);
+    static resp_value error(const std::string& value);
     static resp_value bulk_string(const std::shared_ptr<std::string>& value);
     static resp_value bulk_string(const std::string& value);
     static resp_value array(const std::shared_ptr<std::vector<resp_value>>& value);
@@ -59,6 +64,7 @@ public:
 
     [[nodiscard]] bool isInteger() const;
     [[nodiscard]] bool isSimpleString() const;
+    [[nodiscard]] bool isError() const;
     [[nodiscard]] bool isBulkString() const;
     [[nodiscard]] bool isArray() const;
 private:

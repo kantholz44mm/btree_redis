@@ -15,6 +15,8 @@ resp_value resp_deserializer::readValue() const {
         return resp_value::integer(readInteger());
     case resp_type::STRING:
         return resp_value::simple_string(readSimpleString());
+    case resp_type::ERR:
+        return resp_value::error(readError());
     case resp_type::BULK_STRING:
         return resp_value::bulk_string(readBulkString());
     case resp_type::ARRAY:
@@ -71,6 +73,14 @@ std::shared_ptr<std::vector<resp_value>> resp_deserializer::readArray() const {
 }
 
 std::shared_ptr<std::string> resp_deserializer::readSimpleString() const {
+    connection.requireDataUntil('\r');
+    const auto str = std::make_shared<std::string>();
+    std::getline(input, *str, '\r');
+    expect('\n');
+    return str;
+}
+
+std::shared_ptr<std::string> resp_deserializer::readError() const {
     connection.requireDataUntil('\r');
     const auto str = std::make_shared<std::string>();
     std::getline(input, *str, '\r');

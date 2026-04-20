@@ -16,6 +16,7 @@ public:
     [[nodiscard]] int64_t readInteger() const;
     [[nodiscard]] std::shared_ptr<std::vector<resp_value>> readArray() const;
     [[nodiscard]] std::shared_ptr<std::string> readSimpleString() const;
+    [[nodiscard]] std::shared_ptr<std::string> readError() const;
     [[nodiscard]] std::shared_ptr<std::string> readBulkString() const;
     void expect(char byte) const;
 private:

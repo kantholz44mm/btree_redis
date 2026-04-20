@@ -10,6 +10,8 @@ void resp_serializer::writeValue(const resp_value& value) const {
         writeInteger(value.getAsInteger().value());
     } else if (value.isSimpleString()) {
         writeSimpleString(*value.getAsString().value());
+    } else if (value.isError()) {
+        writeError(*value.getAsString().value());
     } else if (value.isBulkString()) {
         writeBulkString(*value.getAsString().value());
     } else if (value.isArray()) {
@@ -21,6 +23,10 @@ void resp_serializer::writeValue(const resp_value& value) const {
 
 void resp_serializer::writeSimpleString(const std::string& str) const {
     output << resp_type::STRING << str << '\r' << '\n';
+}
+
+void resp_serializer::writeError(const std::string& str) const {
+    output << resp_type::ERR << str << '\r' << '\n';
 }
 
 void resp_serializer::writeBulkString(const std::string& str) const {

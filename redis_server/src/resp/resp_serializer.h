@@ -10,6 +10,7 @@ public:
 
     void writeValue(const resp_value& value) const;
     void writeSimpleString(const std::string& str) const;
+    void writeError(const std::string& str) const;
     void writeBulkString(const std::string& str) const;
     void writeInteger(int64_t value) const;
     void writeArray(const std::vector<resp_value>& vector) const;

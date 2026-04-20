@@ -12,6 +12,14 @@ resp_value resp_value::simple_string(const std::string& value) {
     return simple_string(std::make_shared<std::string>(value));
 }
 
+resp_value resp_value::error(const std::shared_ptr<std::string>& value) {
+    return resp_value{resp_error_value{value}};
+}
+
+resp_value resp_value::error(const std::string& value) {
+    return error(std::make_shared<std::string>(value));
+}
+
 resp_value resp_value::bulk_string(const std::shared_ptr<std::string>& value) {
     return resp_value{resp_bulk_string_value{value}};
 }
@@ -42,6 +50,9 @@ std::optional<std::shared_ptr<std::string>> resp_value::getAsString() const {
     if (const auto bulkStringValue = std::get_if<resp_bulk_string_value>(&value)) {
         return {bulkStringValue->value};
     }
+    if (const auto errorValue = std::get_if<resp_error_value>(&value)) {
+        return {errorValue->message};
+    }
     return std::nullopt;
 }
 
@@ -58,6 +69,10 @@ bool resp_value::isInteger() const {
 
 bool resp_value::isSimpleString() const {
     return std::holds_alternative<resp_simple_string_value>(value);
+}
+
+bool resp_value::isError() const {
+    return std::holds_alternative<resp_error_value>(value);
 }
 
 bool resp_value::isBulkString() const {
