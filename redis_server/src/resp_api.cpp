@@ -1,15 +1,20 @@
 #include "resp_api.h"
 
 #include <iostream>
+#include "resp/resp_command_context.h"
+
+// #define COMMAND_LOGGING
 
 // ReSharper disable CppMemberFunctionMayBeStatic
 
 void resp_api::processCommand(const resp_command_context& command) {
+#ifdef COMMAND_LOGGING
     std::cout << "Received command: ";
     for (const auto& str : command.getCommand()) {
         std::cout << '"' << *str << "\"  ";
     }
     std::cout << std::endl;
+#endif
 
 
     if (command.isAt(0, "ping")) {

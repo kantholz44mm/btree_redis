@@ -20,7 +20,6 @@ resp_connection::resp_connection(tcp::socket& socket, command_handler  handler):
 void resp_connection::run() {
     try {
         while (true) {
-            std::cout << "Waiting for a command..." << std::endl;
             const auto command = readCommand();
             resp_command_context context{*command, *this};
             handler(context);
