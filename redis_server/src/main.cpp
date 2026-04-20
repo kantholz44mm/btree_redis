@@ -20,8 +20,8 @@ int main() {
         tcp::socket socket(io_context);
         acceptor.accept(socket);
         std::cout << "Client connected" << std::endl;
-        resp_connection connection(socket, [](const std::vector<std::shared_ptr<std::string>>& command, const resp_sender con) {
-            respApi.processCommand(command, con);
+        resp_connection connection(socket, [](const resp_command_context& command) {
+            respApi.processCommand(command);
         });
         connection.run();
         std::cout << "Client disconnected" << std::endl;

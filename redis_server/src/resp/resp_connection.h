@@ -4,28 +4,21 @@
 
 #include "resp_deserializer.h"
 #include "resp_serializer.h"
-#include "resp_types.h"
 
 using boost::asio::ip::tcp;
 
 class resp_connection;
+class resp_command_context;
 
-/**
- * Simply a wrapper for a reference to a connection, exposing only the send method.
- */
-class resp_sender {
-public:
-    explicit resp_sender(resp_connection& connection) : connection(connection) {}
-    void send(const resp_value& value) const;
-private:
-    resp_connection& connection;
-};
-
-using command_handler = std::function<void(const std::vector<std::shared_ptr<std::string>>&, resp_sender)>;
+using command_handler = std::function<void(resp_command_context&)>;
 
 class connection_closed : public std::runtime_error {
 public:
     connection_closed();
+    explicit connection_closed(const std::string& message);
+    explicit connection_closed(const char* message);
+    explicit connection_closed(runtime_error&& e);
+    explicit connection_closed(const runtime_error& e);
 };
 
 class resp_connection {
