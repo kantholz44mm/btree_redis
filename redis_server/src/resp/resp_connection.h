@@ -33,7 +33,7 @@ public:
     void flush();
 
 private:
-    std::unique_ptr<std::vector<std::shared_ptr<std::string>>> readCommand() const;
+    std::shared_ptr<std::vector<resp_value>> readCommand() const;
 
 
     boost::asio::streambuf readBuf;

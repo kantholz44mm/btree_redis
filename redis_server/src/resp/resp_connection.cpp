@@ -71,21 +71,10 @@ void resp_connection::flush() {
     }
 }
 
-std::unique_ptr<std::vector<std::shared_ptr<std::string>>> resp_connection::readCommand() const {
+std::shared_ptr<std::vector<resp_value>> resp_connection::readCommand() const {
     const auto val = deserializer.readValue();
     if (!val.isArray()) {
         throw std::runtime_error("Expected an array as the command");
     }
-    const auto arr = val.getAsArray().value();
-
-    auto command = std::make_unique<std::vector<std::shared_ptr<std::string>>>();
-    command->reserve(arr->size());
-    for (const auto& resp_value : *arr) {
-        if (resp_value.isBulkString()) {
-            command->push_back(resp_value.getAsString().value());
-        } else {
-            throw std::runtime_error("Expected only strings in command");
-        }
-    }
-    return command;
+    return *val.getAsArray();
 }

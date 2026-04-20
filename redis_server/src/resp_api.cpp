@@ -10,30 +10,32 @@
 void resp_api::processCommand(const resp_command_context& command) {
 #ifdef COMMAND_LOGGING
     std::cout << "Received command: ";
-    for (const auto& str : command.getCommand()) {
-        std::cout << '"' << *str << "\"  ";
+    for (const auto& val : command.getCommand()) {
+        if (val.isBulkString()) {
+            std::cout << '"' << **val.getAsString() << "\"  ";
+        }
     }
     std::cout << std::endl;
 #endif
 
 
-    if (command.isAt(0, "ping")) {
+    if (command.argIs(0, "ping")) {
         onPing(command);
         return;
     }
-    if (command.isAt(0, "info")) {
+    if (command.argIs(0, "info")) {
         onInfo(command);
         return;
     }
 
-    if (command.isAt(0, "command")) {
-        if (command.isAt(1, "docs")) {
+    if (command.argIs(0, "command")) {
+        if (command.argIs(1, "docs")) {
             onDocs(command);
             return;
         }
     }
-    if (command.isAt(0, "client")) {
-        if (command.isAt(1, "setname")) {
+    if (command.argIs(0, "client")) {
+        if (command.argIs(1, "setname")) {
             command.respond(resp_value::simple_string("OK"));
             return;
         }
