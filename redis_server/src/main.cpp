@@ -2,17 +2,20 @@
 
 #include <boost/asio.hpp>
 
-#include "resp_api.h"
+#include "api/resp_api.h"
+#include "api/api_impl.h"
 #include "resp/resp_connection.h"
+
+#include "btree2020.hpp"
 
 using boost::asio::ip::tcp;
 
-
-resp_api respApi;
+DataStructureWrapper btree(true);
+api_impl apiImpl{btree};
+resp_api respApi{apiImpl};
 
 int main() {
     boost::asio::io_context io_context;
-
     int port = 3000;
     tcp::acceptor acceptor(io_context, tcp::endpoint(tcp::v4(), port));
     std::cout << "RESP server started on port " << port << ", waiting for connection" << std::endl;

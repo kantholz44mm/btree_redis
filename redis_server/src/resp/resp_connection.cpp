@@ -76,5 +76,5 @@ std::shared_ptr<std::vector<resp_value>> resp_connection::readCommand() const {
     if (!val.isArray()) {
         throw std::runtime_error("Expected an array as the command");
     }
-    return *val.getAsArray();
+    return val.getAsArray();
 }

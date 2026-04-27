@@ -9,4 +9,4 @@ if(WIN32)
     target_link_libraries(redis_server PRIVATE wsock32 ws2_32)
 endif()
 
-target_link_libraries(redis_server PRIVATE Boost::asio Boost::algorithm)
+target_link_libraries(redis_server PRIVATE btree Boost::asio Boost::algorithm)

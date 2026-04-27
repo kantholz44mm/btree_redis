@@ -9,13 +9,15 @@ void resp_serializer::writeValue(const resp_value& value) const {
     if (value.isInteger()) {
         writeInteger(value.getAsInteger().value());
     } else if (value.isSimpleString()) {
-        writeSimpleString(*value.getAsString().value());
+        writeSimpleString(*value.getAsString());
     } else if (value.isError()) {
-        writeError(*value.getAsString().value());
+        writeError(*value.getAsString());
     } else if (value.isBulkString()) {
-        writeBulkString(*value.getAsString().value());
+        writeBulkString(*value.getAsString());
+    } else if (value.isNullBulkString()) {
+        writeNullBulkString();
     } else if (value.isArray()) {
-        writeArray(*value.getAsArray().value());
+        writeArray(*value.getAsArray());
     } else {
         throw std::runtime_error("Cannot write value, unknown type");
     }
@@ -31,6 +33,10 @@ void resp_serializer::writeError(const std::string& str) const {
 
 void resp_serializer::writeBulkString(const std::string& str) const {
     output << resp_type::BULK_STRING << str.size() << '\r' << '\n' << str << '\r' << '\n';
+}
+
+void resp_serializer::writeNullBulkString() const {
+    output << resp_type::BULK_STRING << -1 << '\r' << '\n';
 }
 
 void resp_serializer::writeInteger(const int64_t value) const {

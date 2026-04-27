@@ -28,6 +28,10 @@ resp_value resp_value::bulk_string(const std::string& value) {
     return bulk_string(std::make_shared<std::string>(value));
 }
 
+resp_value resp_value::null_bulk_string() {
+    return resp_value{resp_null_bulk_string_value{}};
+}
+
 resp_value resp_value::array(const std::shared_ptr<std::vector<resp_value>>& value) {
     return resp_value{resp_array_value{value}};
 }
@@ -43,7 +47,7 @@ std::optional<int64_t> resp_value::getAsInteger() const {
     return std::nullopt;
 }
 
-std::optional<std::shared_ptr<std::string>> resp_value::getAsString() const {
+std::shared_ptr<std::string> resp_value::getAsString() const {
     if (const auto simpleStringValue = std::get_if<resp_simple_string_value>(&value)) {
         return {simpleStringValue->value};
     }
@@ -53,14 +57,14 @@ std::optional<std::shared_ptr<std::string>> resp_value::getAsString() const {
     if (const auto errorValue = std::get_if<resp_error_value>(&value)) {
         return {errorValue->message};
     }
-    return std::nullopt;
+    return {nullptr};
 }
 
-std::optional<std::shared_ptr<std::vector<resp_value>>> resp_value::getAsArray() const {
+std::shared_ptr<std::vector<resp_value>> resp_value::getAsArray() const {
     if (const auto arrayValue = std::get_if<resp_array_value>(&value)) {
         return {arrayValue->value};
     }
-    return std::nullopt;
+    return {nullptr};
 }
 
 bool resp_value::isInteger() const {
@@ -77,6 +81,10 @@ bool resp_value::isError() const {
 
 bool resp_value::isBulkString() const {
     return std::holds_alternative<resp_bulk_string_value>(value);
+}
+
+bool resp_value::isNullBulkString() const {
+    return std::holds_alternative<resp_null_bulk_string_value>(value);
 }
 
 bool resp_value::isArray() const {
