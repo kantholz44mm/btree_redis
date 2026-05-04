@@ -35,6 +35,9 @@ add_subdirectory(libbtree)
 # Redis server protocol
 add_subdirectory(redis_server)
 
+# Redis client example
+add_subdirectory(client_example)
+
 # 4. Create your main executable
 add_executable(${PROJECT_NAME} main.cpp)
 
