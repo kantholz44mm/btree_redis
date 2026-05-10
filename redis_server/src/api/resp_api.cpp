@@ -14,12 +14,7 @@ resp_api::resp_api(const api_impl& api) : api(api) {
 void resp_api::processCommand(const resp_command_context& command) const {
 #ifdef COMMAND_LOGGING
     std::cout << "Received command: ";
-    for (const auto& val : command.getCommand()) {
-        if (val.isBulkString()) {
-            std::cout << '"' << **val.getAsString() << "\"  ";
-        }
-    }
-    std::cout << std::endl;
+    logCommand(command);
 #endif
 
     // TODO add a proper command tree data structure for better lookup
@@ -79,6 +74,8 @@ void resp_api::processCommand(const resp_command_context& command) const {
         onDecrBy(command);
         return;
     }
+    std::cout << "Unknown command received: ";
+    logCommand(command);
     command.respond(resp_value::error("ERR unknown command"));
 }
 
@@ -248,4 +245,13 @@ void resp_api::onDecrBy(const resp_command_context& command) const {
         return;
     }
     command.respond(resp_value::integer(*result));
+}
+
+void resp_api::logCommand(const resp_command_context& command) const {
+    for (const auto& val : command.getCommand()) {
+        if (val.isBulkString()) {
+            std::cout << '"' << *val.getAsString() << "\"  ";
+        }
+    }
+    std::cout << std::endl;
 }
