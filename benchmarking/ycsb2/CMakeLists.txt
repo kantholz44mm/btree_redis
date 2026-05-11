@@ -9,5 +9,5 @@ if(WIN32)
     target_link_libraries(ycsb2 PRIVATE wsock32 ws2_32)
 endif()
 
-target_link_libraries(ycsb2 PRIVATE hiredis btree zipfc)
+target_link_libraries(ycsb2 PRIVATE redis_client btree zipfc)
 target_link_directories(ycsb2 PRIVATE ${ZIPFC_LIB_PATH})

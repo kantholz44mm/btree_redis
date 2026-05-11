@@ -10,7 +10,7 @@
 
 using boost::asio::ip::tcp;
 
-DataStructureWrapper btree(true);
+DataStructureWrapper btree(false);
 api_impl apiImpl{btree};
 resp_api respApi{apiImpl};
 

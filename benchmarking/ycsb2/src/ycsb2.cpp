@@ -6,6 +6,7 @@
 #include <string>
 #include "BtreeCppPerfEvent.hpp"
 #include "btree2020.hpp"
+#include "RedisClient.h"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -15,6 +16,8 @@ void zipf_generate(uint32_t, double, uint32_t*, uint32_t, bool);
 void generate_rng4(uint64_t seed, uint32_t count, uint32_t* out);
 void generate_rng8(uint64_t seed, uint32_t count, uint64_t* out);
 }
+
+static const std::string PAYLOAD = "PAYLOAD";
 
 uint64_t read_mem_size() {
     std::ifstream statm_file("/proc/self/statm");
@@ -109,7 +112,9 @@ bool keySizeAcceptable(unsigned maxPayload, std::vector<std::string>& data) {
     return true;
 }
 
-void runMulti(BTreeCppPerfEvent e,
+void runMulti(
+              RedisClient& client,
+              BTreeCppPerfEvent e,
               std::vector<std::string>& data,
               unsigned keyCount,
               unsigned payloadSize,
@@ -127,48 +132,42 @@ void runMulti(BTreeCppPerfEvent e,
         opCount = 0;
     }
 
-    uint8_t* payload = makePayload(payloadSize);
-
     uint64_t mem_size_1 = read_mem_size();
-    DataStructureWrapper t(isDataInt(e));
+    client.run("FLUSHALL");
 #ifdef USE_STRUCTURE_LITS
     t.impl.bulkInsert(data);
 #endif
     unsigned preInsertCount = keyCount - keyCount / 10;
     if (!dryRun)
         for (uint64_t i = 0; i < preInsertCount; i++) {
-            uint8_t* key = (uint8_t*)data[i].data();
-            unsigned int length = data[i].size();
-            t.insert(key, length, payload, payloadSize);
+            const auto key = data[i];
+            client.run("SET %s %s", key.c_str(), PAYLOAD.c_str());
         }
 
     {
         // insert
         e.setParam("op", "insert90");
-        BTreeCppPerfEventBlock b(e, t, keyCount - preInsertCount);
         for (uint64_t i = preInsertCount; i < keyCount; i++) {
-            uint8_t* key = (uint8_t*)data[i].data();
-            unsigned int length = data[i].size();
-            t.insert(key, length, payload, payloadSize);
+            const auto key = data[i];
+            client.run("SET %s %s", key.c_str(), PAYLOAD.c_str());
         }
     }
 
     {
         e.setParam("op", "ycsb_c");
-        BTreeCppPerfEventBlock b(e, t, opCount);
         if (!dryRun)
             for (uint64_t i = 0; i < opCount; i++) {
                 unsigned keyIndex = zipf_next(e, keyCount, zipfParameter, false, false);
                 assert(keyIndex < data.size());
-                unsigned payloadSizeOut;
-                uint8_t* key = (uint8_t*)data[keyIndex].data();
-                unsigned long length = data[keyIndex].size();
-                uint8_t* payload = t.lookup(key, length, payloadSizeOut);
-                if (!payload || (payloadSize != payloadSizeOut) || (payloadSize > 0 && *payload != 42))
+                const auto key = data[keyIndex];
+                const auto payload = client.run("GET %s", key.c_str()).getString();
+                if (payload != PAYLOAD)
                     throw;
             }
     }
 
+    // TODO range lookup not supported
+    /*
     std::minstd_rand generator(std::rand());
     std::uniform_int_distribution<unsigned> scanLengthDistribution{1, maxScanLength};
 
@@ -194,6 +193,7 @@ void runMulti(BTreeCppPerfEvent e,
                 t.range_lookup(key, keyLen, keyBuffer, callback);
             }
     }
+    */
     uint64_t mem_size_2 = read_mem_size();
     if (getenv("MEM_SIZE")) {
         std::cout << "__mem_size_79fbae263695," << configName << "," << e.params["data_name"] << "," << mem_size_1 <<
@@ -204,7 +204,7 @@ void runMulti(BTreeCppPerfEvent e,
     data.clear();
 }
 
-void runYcsbC(BTreeCppPerfEvent e, std::vector<std::string>& data, unsigned keyCount, unsigned payloadSize,
+void runYcsbC(RedisClient& client, BTreeCppPerfEvent e, std::vector<std::string>& data, unsigned keyCount, unsigned payloadSize,
               unsigned opCount, double zipfParameter, bool dryRun) {
     if (keyCount <= data.size() && keySizeAcceptable(payloadSize, data)) {
         if (!dryRun)
@@ -216,9 +216,7 @@ void runYcsbC(BTreeCppPerfEvent e, std::vector<std::string>& data, unsigned keyC
         opCount = 0;
     }
 
-    uint8_t* payload = makePayload(payloadSize);
-
-    DataStructureWrapper t(isDataInt(e));
+    client.run("FLUSHALL");
 
 #ifdef USE_STRUCTURE_LITS
     t.impl.bulkInsert(data);
@@ -226,27 +224,22 @@ void runYcsbC(BTreeCppPerfEvent e, std::vector<std::string>& data, unsigned keyC
     {
         // insert
         e.setParam("op", "ycsb_c_init");
-        BTreeCppPerfEventBlock b(e, t, keyCount);
         if (!dryRun)
             for (uint64_t i = 0; i < keyCount; i++) {
-                uint8_t* key = (uint8_t*)data[i].data();
-                unsigned int length = data[i].size();
-                t.insert(key, length, payload, payloadSize);
+                const auto& key = data[i];
+                client.run("SET %s %s", key.c_str(), PAYLOAD.c_str());
             }
     }
 
     {
         e.setParam("op", "ycsb_c");
-        BTreeCppPerfEventBlock b(e, t, opCount);
         if (!dryRun)
             for (uint64_t i = 0; i < opCount; i++) {
                 unsigned keyIndex = zipf_next(e, keyCount, zipfParameter, false, false);
                 assert(keyIndex < data.size());
-                unsigned payloadSizeOut;
-                uint8_t* key = (uint8_t*)data[keyIndex].data();
-                unsigned long length = data[keyIndex].size();
-                uint8_t* payload = t.lookup(key, length, payloadSizeOut);
-                if (!payload || (payloadSize != payloadSizeOut) || (payloadSize > 0 && *payload != 42))
+                const auto& key = data[keyIndex];
+                const auto payload = client.run("GET %s", key.c_str()).getString();
+                if (payload != PAYLOAD)
                     throw;
             }
     }
@@ -254,7 +247,7 @@ void runYcsbC(BTreeCppPerfEvent e, std::vector<std::string>& data, unsigned keyC
     data.clear();
 }
 
-void runSortedInsert(BTreeCppPerfEvent e, std::vector<std::string>& data, unsigned keyCount, unsigned payloadSize,
+void runSortedInsert(RedisClient& client, BTreeCppPerfEvent e, std::vector<std::string>& data, unsigned keyCount, unsigned payloadSize,
                      bool dryRun, bool doSort = true) {
     if (keyCount <= data.size() && keySizeAcceptable(payloadSize, data)) {
         data.resize(keyCount);
@@ -266,18 +259,15 @@ void runSortedInsert(BTreeCppPerfEvent e, std::vector<std::string>& data, unsign
         keyCount = 0;
     }
 
-    uint8_t* payload = makePayload(payloadSize);
 
-    DataStructureWrapper t(isDataInt(e));
+    client.run("FLUSHALL");
     {
         // insert
         e.setParam("op", "sorted_insert");
-        BTreeCppPerfEventBlock b(e, t, keyCount);
         if (!dryRun)
             for (uint64_t i = 0; i < keyCount; i++) {
-                uint8_t* key = (uint8_t*)data[i].data();
-                unsigned int length = data[i].size();
-                t.insert(key, length, payload, payloadSize);
+                const auto key = data[i];
+                client.run("SET %s %s", key.c_str(), PAYLOAD.c_str());
             }
     }
     data.clear();
@@ -305,7 +295,9 @@ bool computeInitialKeyCount(unsigned avgKeyCount,
     return configValid;
 }
 
-void runYcsbD(BTreeCppPerfEvent e,
+void runYcsbD(
+              RedisClient& client,
+              BTreeCppPerfEvent e,
               std::vector<std::string>& data,
               unsigned avgKeyCount,
               unsigned payloadSize,
@@ -323,25 +315,21 @@ void runYcsbD(BTreeCppPerfEvent e,
 
     if (!dryRun)
         std::random_shuffle(data.begin(), data.end());
-    uint8_t* payload = makePayload(payloadSize);
 
-    DataStructureWrapper t(isDataInt(e));
+    client.run("FLUSHALL");
     {
         // insert
         e.setParam("op", "ycsb_d_init");
-        BTreeCppPerfEventBlock b(e, t, initialKeyCount);
         if (!dryRun)
             for (uint64_t i = 0; i < initialKeyCount; i++) {
-                uint8_t* key = (uint8_t*)data[i].data();
-                unsigned int length = data[i].size();
-                t.insert(key, length, payload, payloadSize);
+                const auto key = data[i];
+                client.run("SET %s %s", key.c_str(), PAYLOAD.c_str());
             }
     }
 
     unsigned insertedCount = initialKeyCount;
     {
         e.setParam("op", "ycsb_d");
-        BTreeCppPerfEventBlock b(e, t, opCount);
         if (!dryRun)
             for (uint64_t completedOps = 0; completedOps < opCount; ++completedOps) {
                 if (op_next(e)) {
@@ -349,25 +337,24 @@ void runYcsbD(BTreeCppPerfEvent e,
                         std::cerr << "exhausted keys for insertion" << std::endl;
                         abort();
                     }
-                    uint8_t* key = (uint8_t*)data[insertedCount].data();
-                    unsigned int length = data[insertedCount].size();
-                    t.insert(key, length, payload, payloadSize);
+                    const auto key = data[insertedCount];
+                    client.run("SET %s %s", key.c_str(), PAYLOAD.c_str());
                     ++insertedCount;
                 } else {
                     unsigned zipfSample = zipf_next(e, insertedCount, zipfParameter, false, true);
                     unsigned keyIndex = insertedCount - 1 - zipfSample;
-                    unsigned payloadSizeOut;
-                    uint8_t* key = (uint8_t*)data[keyIndex].data();
-                    unsigned long length = data[keyIndex].size();
-                    uint8_t* payload = t.lookup(key, length, payloadSizeOut);
-                    if (!payload || (payloadSize != payloadSizeOut) || (payloadSize > 0 && *payload != 42))
+                    const auto& key = data[keyIndex];
+                    const auto payload = client.run("GET %s", key.c_str()).getString();
+                    if (payload != PAYLOAD)
                         throw;
                 }
             }
     }
 }
 
-void runYcsbE(BTreeCppPerfEvent e,
+void runYcsbE(
+              RedisClient& client,
+              BTreeCppPerfEvent e,
               std::vector<std::string>& data,
               unsigned avgKeyCount,
               unsigned payloadSize,
@@ -396,16 +383,14 @@ void runYcsbE(BTreeCppPerfEvent e,
         std::random_shuffle(permutation, permutation + data.size());
         delete[] permutation;
     }
-    DataStructureWrapper t(isDataInt(e));
+    client.run("FLUSHALL");
     {
         // insert
         e.setParam("op", "ycsb_e_init");
-        BTreeCppPerfEventBlock b(e, t, initialKeyCount);
         if (!dryRun)
             for (uint64_t i = 0; i < initialKeyCount; i++) {
-                uint8_t* key = (uint8_t*)data[i].data();
-                unsigned int length = data[i].size();
-                t.insert(key, length, payload, payloadSize);
+                const auto key = data[i];
+                client.run("SET %s %s", key.c_str(), PAYLOAD.c_str());
             }
     }
 
@@ -416,7 +401,6 @@ void runYcsbE(BTreeCppPerfEvent e,
     unsigned sampleIndex = 0;
     {
         e.setParam("op", "ycsb_e");
-        BTreeCppPerfEventBlock b(e, t, opCount);
         if (!dryRun)
             for (uint64_t completedOps = 0; completedOps < opCount; ++completedOps, ++sampleIndex) {
                 if (op_next(e)) {
@@ -425,9 +409,8 @@ void runYcsbE(BTreeCppPerfEvent e,
                         std::cerr << "exhausted keys for insertion" << std::endl;
                         abort();
                     }
-                    uint8_t* key = (uint8_t*)data[insertedCount].data();
-                    unsigned int length = data[insertedCount].size();
-                    t.insert(key, length, payload, payloadSize);
+                    const auto key = data[insertedCount];
+                    client.run("SET %s %s", key.c_str(), PAYLOAD.c_str());
                     ++insertedCount;
                 } else {
                     // printf("range :%lu\n",completedOps);
@@ -437,9 +420,11 @@ void runYcsbE(BTreeCppPerfEvent e,
                         unsigned keyIndex = zipf_next(e, reasonableMaxKeys, zipfParameter, true, true);
                         // COUNTER(zipf_reject_rate_E, keyIndex >= insertedCount, 1 << 10);
                         if (keyIndex < insertedCount) {
+                            // TODO range lookups are not part of the redis protocol for standard key value stores
+                            /*
                             uint8_t keyBuffer[BTreeNode::maxKVSize];
                             unsigned foundIndex = 0;
-                            uint8_t* key = (uint8_t*)data[keyIndex].data();
+                            const auto key = data[keyIndex];
                             unsigned int keyLen = data[keyIndex].size();
                             auto callback = [&](unsigned keyLen, uint8_t* payload, unsigned loadedPayloadLen) {
                                 if (payloadSize != loadedPayloadLen) {
@@ -450,6 +435,7 @@ void runYcsbE(BTreeCppPerfEvent e,
                             };
                             t.range_lookup(key, keyLen, keyBuffer, callback);
                             break;
+                            */
                         } else {
                             ++sampleIndex;
                         }
@@ -459,14 +445,16 @@ void runYcsbE(BTreeCppPerfEvent e,
     }
 }
 
-void runSortedScan(BTreeCppPerfEvent e,
-                   std::vector<std::string>& data,
-                   unsigned keyCount,
-                   unsigned payloadSize,
-                   unsigned opCount,
-                   unsigned maxScanLength,
-                   double zipfParameter,
-                   bool dryRun) {
+void runSortedScan(
+    RedisClient& client,
+    BTreeCppPerfEvent e,
+    std::vector<std::string>& data,
+    unsigned keyCount,
+    unsigned payloadSize,
+    unsigned opCount,
+    unsigned maxScanLength,
+    double zipfParameter,
+    bool dryRun) {
     if (keyCount <= data.size()) {
         if (!dryRun)
             std::random_shuffle(data.begin(), data.end());
@@ -479,22 +467,22 @@ void runSortedScan(BTreeCppPerfEvent e,
 
     uint8_t* payload = makePayload(payloadSize);
 
-    DataStructureWrapper t(isDataInt(e));
+    client.run("FLUSHALL");
     {
         // insert
         e.setParam("op", "sorted_scan_init");
-        BTreeCppPerfEventBlock b(e, t, keyCount);
         if (!dryRun)
             for (uint64_t i = 0; i < keyCount; i++) {
-                uint8_t* key = (uint8_t*)data[i].data();
-                unsigned int length = data[i].size();
-                t.insert(key, length, payload, payloadSize);
+                const auto key = data[i];
+                client.run("SET %s %s", key.c_str(), PAYLOAD.c_str());
             }
     }
     uint8_t keyBuffer[BTreeNode::maxKVSize];
     std::minstd_rand generator(std::rand());
     std::uniform_int_distribution<unsigned> scanLengthDistribution{1, maxScanLength};
 
+    // TODO range scan not supported
+    /*
     t.range_lookup(payload, 0, keyBuffer, [&](unsigned keyLen, uint8_t* payload, unsigned loadedPayloadLen) {
         return true;
     });
@@ -520,7 +508,7 @@ void runSortedScan(BTreeCppPerfEvent e,
                 };
                 t.range_lookup(key, keyLen, keyBuffer, callback);
             }
-    }
+    }*/
 }
 
 unsigned workloadGenCount(unsigned keyCount, unsigned opCount, unsigned ycsbVariant) {
@@ -601,6 +589,8 @@ void lits_escape_strings(std::vector<std::string>& data) {
 }
 
 int main(int argc, char* argv[]) {
+    auto client = RedisClient::connect(getenv("REDIS_HOST"), envu64("REDIS_PORT"));
+
     bool dryRun = getenv("DRYRUN");
 
     std::vector<std::string> data;
@@ -766,37 +756,37 @@ int main(int argc, char* argv[]) {
     switch (envu64("YCSB_VARIANT")) {
     case 3:
         {
-            runYcsbC(e, data, keyCount, payloadSize, opCount, zipfParameter, dryRun);
+            runYcsbC(client, e, data, keyCount, payloadSize, opCount, zipfParameter, dryRun);
             break;
         }
     case 4:
         {
-            runYcsbD(e, data, keyCount, payloadSize, opCount, zipfParameter, dryRun);
+            runYcsbD(client, e, data, keyCount, payloadSize, opCount, zipfParameter, dryRun);
             break;
         }
     case 401:
         {
-            runSortedInsert(e, data, keyCount, payloadSize, dryRun);
+            runSortedInsert(client, e, data, keyCount, payloadSize, dryRun);
             break;
         }
     case 402:
         {
-            runSortedInsert(e, data, keyCount, payloadSize, dryRun, false);
+            runSortedInsert(client, e, data, keyCount, payloadSize, dryRun, false);
             break;
         }
     case 5:
         {
-            runYcsbE(e, data, keyCount, payloadSize, opCount, maxScanLength, zipfParameter, dryRun);
+            runYcsbE(client, e, data, keyCount, payloadSize, opCount, maxScanLength, zipfParameter, dryRun);
             break;
         }
     case 501:
         {
-            runSortedScan(e, data, keyCount, payloadSize, opCount, maxScanLength, zipfParameter, dryRun);
+            runSortedScan(client, e, data, keyCount, payloadSize, opCount, maxScanLength, zipfParameter, dryRun);
             break;
         }
     case 6:
         {
-            runMulti(e, data, keyCount, payloadSize, opCount, zipfParameter, maxScanLength, dryRun);
+            runMulti(client, e, data, keyCount, payloadSize, opCount, zipfParameter, maxScanLength, dryRun);
             break;
         }
     default:
