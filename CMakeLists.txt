@@ -35,6 +35,9 @@ add_subdirectory(libbtree)
 # Redis server protocol
 add_subdirectory(redis_server)
 
+# YCSB2 Benchmarking
+add_subdirectory(benchmarking/ycsb2)
+
 # Redis client example
 add_subdirectory(client_example)
 
