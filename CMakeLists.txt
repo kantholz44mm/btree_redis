@@ -35,14 +35,14 @@ add_subdirectory(libbtree)
 # Redis server protocol
 add_subdirectory(redis_server)
 
+# Redis server protocol
+add_subdirectory(redis_client)
+
 # zipf-C library
 add_subdirectory(zipfc)
 
 # YCSB2 Benchmarking
 add_subdirectory(benchmarking/ycsb2)
-
-# Redis client example
-add_subdirectory(client_example)
 
 # 4. Create your main executable
 add_executable(${PROJECT_NAME} main.cpp)
