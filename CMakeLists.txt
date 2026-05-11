@@ -35,6 +35,9 @@ add_subdirectory(libbtree)
 # Redis server protocol
 add_subdirectory(redis_server)
 
+# zipf-C library
+add_subdirectory(zipfc)
+
 # YCSB2 Benchmarking
 add_subdirectory(benchmarking/ycsb2)
 
