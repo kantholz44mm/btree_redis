@@ -94,7 +94,7 @@ std::shared_ptr<std::string> resp_deserializer::readBulkString() const {
     auto str = std::make_shared<std::string>();
     str->reserve(length);
     std::copy_n(std::istreambuf_iterator(input), length, std::back_inserter(*str));
-    input.get(); // For some reason, the above doesn't read the last byte
+    if (length != 0) input.get(); // For some reason, the above doesn't read the last byte
     expect('\r');
     expect('\n');
     return str;
