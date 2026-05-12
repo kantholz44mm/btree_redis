@@ -18,12 +18,12 @@ void runTest(vector<string>& data, std::string dataName)
    BTreeCppPerfEvent e = makePerfEvent(dataName, sorted, data.size());
    e.setParam("payload_size", sizeof(uint64_t));
 
-   DataStructureWrapper t;
+   DataStructureWrapper t(dataName == "int");
    uint64_t count = data.size();
    {
       // insert
       e.setParam("op", "insert");
-      BTreeCppPerfEventBlock b(e, count);
+      BTreeCppPerfEventBlock b(e, t, count);
       for (uint64_t i = 0; i < count; i++) {
          uint8_t* key = (uint8_t*)data[i].data();
          unsigned int length = data[i].size();
@@ -37,7 +37,7 @@ void runTest(vector<string>& data, std::string dataName)
    {
       // lookup
       e.setParam("op", "lookup");
-      BTreeCppPerfEventBlock b(e, count);
+      BTreeCppPerfEventBlock b(e, t, count);
       for (uint64_t i = 0; i < count; i++) {
          unsigned payloadSize;
          uint8_t* keyPtr = (uint8_t*)data[i].data();
@@ -50,7 +50,7 @@ void runTest(vector<string>& data, std::string dataName)
 
    if (configName != std::string{"art"}) {
       e.setParam("op", "range");
-      BTreeCppPerfEventBlock b(e, count / 4);
+      BTreeCppPerfEventBlock b(e, t, count / 4);
       for (uint64_t i = 0; i < count; i += 4) {
          uint8_t keyBuffer[BTreeNode::maxKVSize];
          unsigned foundIndex = 0;
@@ -72,7 +72,7 @@ void runTest(vector<string>& data, std::string dataName)
 
    if (configName != std::string{"art"} && configName != std::string{"dense1"} && configName != std::string{"dense2"}) {
       e.setParam("op", "desc");
-      BTreeCppPerfEventBlock b(e, count / 4);
+      BTreeCppPerfEventBlock b(e, t, count / 4);
       for (uint64_t i = 0; i < count; i += 4) {
          uint8_t keyBuffer[BTreeNode::maxKVSize];
          unsigned foundIndex = 0;
@@ -110,7 +110,7 @@ void runTest(vector<string>& data, std::string dataName)
          t.insert((uint8_t*)data[i].data(), data[i].size(), reinterpret_cast<uint8_t*>(&i), sizeof(uint64_t));
       {
          e.setParam("op", "remove");
-         BTreeCppPerfEventBlock b(e, count);
+         BTreeCppPerfEventBlock b(e, t, count);
          for (uint64_t i = 0; i < count; i++)  // remove all
             t.remove((uint8_t*)data[i].data(), data[i].size());
       }

@@ -13,7 +13,6 @@
 #include <vector>
 
 #include <immintrin.h>
-#include <libaio.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/time.h>
@@ -22,8 +21,8 @@
 
 #define TBB_SUPPRESS_DEPRECATED_MESSAGES 1
 
+#include <tbb/global_control.h>
 #include <tbb/parallel_for.h>
-#include <tbb/task_scheduler_init.h>
 
 #include "../btree/BtreeCppPerfEvent.hpp"
 #include "exception_hack.hpp"
@@ -169,7 +168,7 @@ struct vmcacheAdapter {
    DataStructureWrapper* tree;
 
   public:
-   vmcacheAdapter() { tree = new DataStructureWrapper(); }
+   vmcacheAdapter() { tree = new DataStructureWrapper(false); }
 
    void scan(const typename Record::Key& key,
              const std::function<bool(const typename Record::Key&, const Record&)>& found_record_cb,
@@ -309,7 +308,7 @@ int main(int argc, char** argv)
       throw;
 
    unsigned nthreads = 1;
-   tbb::task_scheduler_init init(nthreads);
+   tbb::global_control tbbThreads(tbb::global_control::max_allowed_parallelism, nthreads);
    u64 n = envOr("WH", 10);
    u64 runForSec = envOr("RUNFOR", 30);
    BTreeCppPerfEvent e = makePerfEvent("tpcc", false, n);
@@ -370,7 +369,7 @@ int main(int argc, char** argv)
    std::cerr << "setup complete" << std::endl;
 
    thread worker([&]() {
-      BTreeCppPerfEventBlock b(e, 0);
+      BTreeCppPerfEventBlock b(e, *warehouse.tree, 0);
       workerThreadId = 0;
       while (keepRunning.load()) {
          int w_id = tpcc.urand(1, warehouseCount);  // wh crossing

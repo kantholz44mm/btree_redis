@@ -9,3 +9,9 @@
 /tlx_build_n3/
 /tlx_build_d0/
 /libwh.so
+/joblog*
+/R/eval-2/re-eval.csv
+/R/eval-dense/dense-tasks-op2.csv
+/R/eval-dense/var-density-new-op.csv
+/R/in-memory-skew/skew-op2.csv
+/R/size3/vary6.csv

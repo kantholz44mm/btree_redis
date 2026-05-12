@@ -1,3 +1,5 @@
+export LD_LIBRARY_PATH=$PWD:$LD_LIBRARY_PATH
+
 JOBS=1
 
 python3 R/eval-2/re-eval.py|shuf |parallel -j$JOBS --timeout 600 --joblog joblog-re-eval -- {1}| tee R/eval-2/re-eval.csv

@@ -1,3 +1,69 @@
+# Steps
+1. Install the necessary dependencies
+```sh
+sudo apt install make cmake clang g++ cargo rustc r-base r-base-dev parallel coreutils
+```
+
+2. build the project using the command
+```sh
+make all
+make ycsb-all
+```
+
+3. Run the build_all_var_page_size script
+```sh
+./build_all_var_page_size.sh
+```
+
+4. Run the chrismas-run script
+```sh
+./R/chrismas-run.sh
+```
+
+# Possible chrismas-run.sh problems
+5 scripts are run on the shellscript
+1. python3 R/eval-2/re-eval.py
+2. python3 R/in-memory-skew/skew-op2.py
+3. python3 R/size3/vary6.py
+4. python3 R/eval-dense/var-density-new-op.py
+5. python3 R/eval-dense/dense-tasks-op2.py
+
+## Scripts 1 & 2
+Python scripts 1 and 2 may throw the following errors:
+```sh
+env: ‘named-build/art-n3-ycsb’: No such file or directory
+env: ‘named-build/baseline-n3-ycsb’: No such file or directory
+env: ‘named-build/dense1-n3-ycsb’: No such file or directory
+env: ‘named-build/dense2-n3-ycsb’: No such file or directory
+env: ‘named-build/dense3-n3-ycsb’: No such file or directory
+env: ‘named-build/hash-n3-ycsb’: No such file or directory
+env: ‘named-build/heads-n3-ycsb’: No such file or directory
+env: ‘named-build/hints-n3-ycsb’: No such file or directory
+env: ‘named-build/hot-n3-ycsb’: No such file or directory
+env: ‘named-build/inner-n3-ycsb’: No such file or directory
+env: ‘named-build/prefix-n3-ycsb’: No such file or directory
+env: ‘named-build/tlx-n3-ycsb’: No such file or directory
+```
+if the project was not build (`make all`)
+
+## Scripts 3, 4 and 5
+Python scripts 3, 4 and 5 may throw the following errors...
+```sh
+env: ‘page-size-builds/_DPS_I_1024__DPS_L_4096/dense2-n3-ycsb’: No such file or directory
+env: ‘page-size-builds/_DPS_I_16384__DPS_L_4096/hash-n3-ycsb’: No such file or directory
+env: ‘page-size-builds/_DPS_I_256__DPS_L_4096/hints-n3-ycsb’: No such file or directory
+env: ‘page-size-builds/_DPS_I_32768__DPS_L_4096/baseline-n3-ycsb’: No such file or directory
+env: ‘page-size-builds/_DPS_I_4096__DPS_L_2048/prefix-n3-ycsb’: No such file or directory
+env: ‘page-size-builds/_DPS_I_4096__DPS_L_256/heads-n3-ycsb’: No such file or directory
+env: ‘page-size-builds/_DPS_I_4096__DPS_L_4096/baseline-n3-ycsb’: No such file or directory
+env: ‘page-size-builds/_DPS_I_4096__DPS_L_512/dense3-n3-ycsb’: No such file or directory
+env: ‘page-size-builds/_DPS_I_4096__DPS_L_8192/hints-n3-ycsb’: No such file or directory
+env: ‘page-size-builds/_DPS_I_512__DPS_L_4096/prefix-n3-ycsb’: No such file or directory
+env: ‘page-size-builds/_DPS_I_8192__DPS_L_4096/dense3-n3-ycsb’: No such file or directory
+```
+if the shell script `./build_all_var_page_size.sh` was not executed (it builds the project multiple times with different node sizes)
+
+# Old readme content
 This repository contains suplementary data for our paper "B-Trees Are Back: Engineering Fast and Pageable Node Layouts".
 The B-Tree implementation contained is to help others reproduce our findings.
 It is not suitable for production use.
