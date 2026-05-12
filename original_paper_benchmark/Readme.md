@@ -20,13 +20,13 @@ make ycsb-all
 ./R/chrismas-run.sh
 ```
 
-# Possible chrismas-run.sh problems
+# Possible `/R/chrismas-run.sh` problems
 5 scripts are run on the shellscript
-1. python3 R/eval-2/re-eval.py
+1. python3 R/eval-2/re-eval.py  
 2. python3 R/in-memory-skew/skew-op2.py
-3. python3 R/size3/vary6.py
+3. python3 R/size3/vary6.py 
 4. python3 R/eval-dense/var-density-new-op.py
-5. python3 R/eval-dense/dense-tasks-op2.py
+5. python3 R/eval-dense/dense-tasks-op2.py 
 
 ## Scripts 1 & 2
 Python scripts 1 and 2 may throw the following errors:
@@ -62,6 +62,19 @@ env: ‘page-size-builds/_DPS_I_512__DPS_L_4096/prefix-n3-ycsb’: No such file 
 env: ‘page-size-builds/_DPS_I_8192__DPS_L_4096/dense3-n3-ycsb’: No such file or directory
 ```
 if the shell script `./build_all_var_page_size.sh` was not executed (it builds the project multiple times with different node sizes)
+
+# Benchmark duration
+
+Hardware Specs:
+
+
+|Benchmark file | Starting time | End time | Duration |
+|---|---|---|---|
+| R/eval-2/re-eval.py | 05.05.2026 10:05:24 | 06.05.2026 01:21:31 | 15:16:07 |
+| R/in-memory-skew/skew-op2.py | 06.05.2026 01:21:32 | 08.05.2026 15:22:32 | 62:01:00
+| R/size3/vary6.py | 08.05.2026 15:22:32 | 10.05.2026 15:18:26 | 47:55:54 |
+| R/eval-dense/var-density-new-op.py | 10.05.2026 15:18:54 | 11.05.2026 11:21:07 | 20:02:13 |
+| R/eval-dense/dense-tasks-op2.py | 11.05.2026 11:21:41 | 11.05.2026 19:35:42 | 8:14:01 |
 
 # Old readme content
 This repository contains suplementary data for our paper "B-Trees Are Back: Engineering Fast and Pageable Node Layouts".
