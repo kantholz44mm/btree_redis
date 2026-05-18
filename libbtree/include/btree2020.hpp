@@ -680,6 +680,7 @@ struct BTree {
                               unsigned int keyLen,
                               uint8_t* keyOut,
                               const std::function<bool(unsigned int, uint8_t*, unsigned int)>& found_record_cb);
+   void clearImpl();
    void splitNode(AnyNode* node, AnyNode* parent, uint8_t* key, unsigned keyLength);
    void ensureSpace(AnyNode* toSplit, uint8_t* key, unsigned keyLength);
 };
@@ -740,6 +741,7 @@ struct DataStructureWrapper {
                           unsigned int keyLen,
                           uint8_t* keyOut,
                           const std::function<bool(unsigned int, uint8_t*, unsigned int)>& found_record_cb);
+   void clear();
    void testing_update_payload(uint8_t* key, unsigned int keyLength, uint8_t* payload);
 };
 

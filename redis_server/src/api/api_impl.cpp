@@ -53,6 +53,10 @@ std::optional<int64_t> api_impl::increment(std::string& key, const int64_t amoun
     return {intVal};
 }
 
+void api_impl::flushAll() const {
+    btree.clear();
+}
+
 std::optional<int64_t> api_impl::parseIntStrict(const std::string& str) {
     return parseIntStrict(str.data(), str.data() + str.length());
 }

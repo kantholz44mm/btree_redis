@@ -14,6 +14,7 @@ public:
     bool del(std::string& key) const;
     bool exists(std::string& key) const;
     std::optional<int64_t> increment(std::string& key, int64_t amount = 1) const;
+    void flushAll() const;
 
     static std::optional<int64_t> parseIntStrict(const std::string& str);
     static std::optional<int64_t> parseIntStrict(const char* buf, size_t size);

@@ -1108,6 +1108,13 @@ void DataStructureWrapper::range_lookup_desc(uint8_t* key,
 #endif
 }
 
+void DataStructureWrapper::clear() {
+#ifdef CHECK_TREE_OPS
+    std_map.clear();
+#endif
+    impl.clearImpl();
+}
+
 void BTree::range_lookup_descImpl(uint8_t* key,
                                   unsigned keyLen,
                                   uint8_t* keyOut,
@@ -1156,6 +1163,13 @@ void BTree::range_lookup_descImpl(uint8_t* key,
          break;
       }
    }
+}
+
+void BTree::clearImpl() {
+    if (root != nullptr) {
+        root->destroy();
+    }
+    root = (enableHash && !enableHashAdapt) ? HashNode::makeRootLeaf() : BTreeNode::makeLeaf();
 }
 
 void BTreeNode::validateHint()

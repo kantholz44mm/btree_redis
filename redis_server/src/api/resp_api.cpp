@@ -74,6 +74,12 @@ void resp_api::processCommand(const resp_command_context& command) const {
         onDecrBy(command);
         return;
     }
+
+    if (command.argIs(0, "flushall")) {
+        onFlushAll(command);
+        return;
+    }
+
     std::cout << "Unknown command received: ";
     logCommand(command);
     command.respond(resp_value::error("ERR unknown command"));
@@ -245,6 +251,12 @@ void resp_api::onDecrBy(const resp_command_context& command) const {
         return;
     }
     command.respond(resp_value::integer(*result));
+}
+
+/** https://redis.io/docs/latest/commands/flushall/ */
+void resp_api::onFlushAll(const resp_command_context& command) const {
+    api.flushAll();
+    command.respondOk();
 }
 
 void resp_api::logCommand(const resp_command_context& command) const {

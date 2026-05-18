@@ -23,6 +23,8 @@ public:
     void onDecr(const resp_command_context& command) const;
     void onDecrBy(const resp_command_context& command) const;
 
+    void onFlushAll(const resp_command_context& command) const;
+
 private:
     void logCommand(const resp_command_context& command) const;
     const api_impl& api;
