@@ -1,7 +1,10 @@
 #pragma once
 
+#include <format>
+
 #include "hiredis.h"
 #include "RedisReply.h"
+#include <stdexcept>
 
 class RedisClient {
 public:
@@ -23,5 +26,9 @@ private:
 
 template <typename ... Args>
 RedisReply RedisClient::run(const char* format, Args... args) {
-    return RedisReply(static_cast<redisReply*>(redisCommand(context, format, args...)));
+    const auto reply = static_cast<redisReply*>(redisCommand(context, format, args...));
+    if (reply == nullptr) {
+        throw std::runtime_error(std::format("Error sending command \"{}\" (Code {}): {}", format, context->err, context->errstr));
+    }
+    return RedisReply(reply);
 }
