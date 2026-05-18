@@ -133,7 +133,7 @@ void runMulti(
     }
 
     uint64_t mem_size_1 = read_mem_size();
-    client.run("FLUSHALL");
+    client.run("FLUSHALL").orThrow();
 #ifdef USE_STRUCTURE_LITS
     t.impl.bulkInsert(data);
 #endif
@@ -141,7 +141,7 @@ void runMulti(
     if (!dryRun)
         for (uint64_t i = 0; i < preInsertCount; i++) {
             const auto key = data[i];
-            client.run("SET %s %s", key.c_str(), PAYLOAD.c_str());
+            client.run("SET %s %s", key.c_str(), PAYLOAD.c_str()).orThrow();
         }
 
     {
@@ -149,7 +149,7 @@ void runMulti(
         e.setParam("op", "insert90");
         for (uint64_t i = preInsertCount; i < keyCount; i++) {
             const auto key = data[i];
-            client.run("SET %s %s", key.c_str(), PAYLOAD.c_str());
+            client.run("SET %s %s", key.c_str(), PAYLOAD.c_str()).orThrow();
         }
     }
 
@@ -160,7 +160,7 @@ void runMulti(
                 unsigned keyIndex = zipf_next(e, keyCount, zipfParameter, false, false);
                 assert(keyIndex < data.size());
                 const auto key = data[keyIndex];
-                const auto payload = client.run("GET %s", key.c_str()).getString();
+                const auto payload = client.run("GET %s", key.c_str()).orThrow().getString();
                 if (payload != PAYLOAD)
                     throw;
             }
@@ -216,7 +216,7 @@ void runYcsbC(RedisClient& client, BTreeCppPerfEvent e, std::vector<std::string>
         opCount = 0;
     }
 
-    client.run("FLUSHALL");
+    client.run("FLUSHALL").orThrow();
 
 #ifdef USE_STRUCTURE_LITS
     t.impl.bulkInsert(data);
@@ -227,7 +227,7 @@ void runYcsbC(RedisClient& client, BTreeCppPerfEvent e, std::vector<std::string>
         if (!dryRun)
             for (uint64_t i = 0; i < keyCount; i++) {
                 const auto& key = data[i];
-                client.run("SET %s %s", key.c_str(), PAYLOAD.c_str());
+                client.run("SET %s %s", key.c_str(), PAYLOAD.c_str()).orThrow();
             }
     }
 
@@ -238,7 +238,7 @@ void runYcsbC(RedisClient& client, BTreeCppPerfEvent e, std::vector<std::string>
                 unsigned keyIndex = zipf_next(e, keyCount, zipfParameter, false, false);
                 assert(keyIndex < data.size());
                 const auto& key = data[keyIndex];
-                const auto payload = client.run("GET %s", key.c_str()).getString();
+                const auto payload = client.run("GET %s", key.c_str()).orThrow().getString();
                 if (payload != PAYLOAD)
                     throw;
             }
@@ -260,14 +260,14 @@ void runSortedInsert(RedisClient& client, BTreeCppPerfEvent e, std::vector<std::
     }
 
 
-    client.run("FLUSHALL");
+    client.run("FLUSHALL").orThrow();
     {
         // insert
         e.setParam("op", "sorted_insert");
         if (!dryRun)
             for (uint64_t i = 0; i < keyCount; i++) {
                 const auto key = data[i];
-                client.run("SET %s %s", key.c_str(), PAYLOAD.c_str());
+                client.run("SET %s %s", key.c_str(), PAYLOAD.c_str()).orThrow();
             }
     }
     data.clear();
@@ -316,14 +316,14 @@ void runYcsbD(
     if (!dryRun)
         std::random_shuffle(data.begin(), data.end());
 
-    client.run("FLUSHALL");
+    client.run("FLUSHALL").orThrow();
     {
         // insert
         e.setParam("op", "ycsb_d_init");
         if (!dryRun)
             for (uint64_t i = 0; i < initialKeyCount; i++) {
                 const auto key = data[i];
-                client.run("SET %s %s", key.c_str(), PAYLOAD.c_str());
+                client.run("SET %s %s", key.c_str(), PAYLOAD.c_str()).orThrow();
             }
     }
 
@@ -338,13 +338,13 @@ void runYcsbD(
                         abort();
                     }
                     const auto key = data[insertedCount];
-                    client.run("SET %s %s", key.c_str(), PAYLOAD.c_str());
+                    client.run("SET %s %s", key.c_str(), PAYLOAD.c_str()).orThrow();
                     ++insertedCount;
                 } else {
                     unsigned zipfSample = zipf_next(e, insertedCount, zipfParameter, false, true);
                     unsigned keyIndex = insertedCount - 1 - zipfSample;
                     const auto& key = data[keyIndex];
-                    const auto payload = client.run("GET %s", key.c_str()).getString();
+                    const auto payload = client.run("GET %s", key.c_str()).orThrow().getString();
                     if (payload != PAYLOAD)
                         throw;
                 }
@@ -383,14 +383,14 @@ void runYcsbE(
         std::random_shuffle(permutation, permutation + data.size());
         delete[] permutation;
     }
-    client.run("FLUSHALL");
+    client.run("FLUSHALL").orThrow();
     {
         // insert
         e.setParam("op", "ycsb_e_init");
         if (!dryRun)
             for (uint64_t i = 0; i < initialKeyCount; i++) {
                 const auto key = data[i];
-                client.run("SET %s %s", key.c_str(), PAYLOAD.c_str());
+                client.run("SET %s %s", key.c_str(), PAYLOAD.c_str()).orThrow();
             }
     }
 
@@ -410,7 +410,7 @@ void runYcsbE(
                         abort();
                     }
                     const auto key = data[insertedCount];
-                    client.run("SET %s %s", key.c_str(), PAYLOAD.c_str());
+                    client.run("SET %s %s", key.c_str(), PAYLOAD.c_str()).orThrow();
                     ++insertedCount;
                 } else {
                     // printf("range :%lu\n",completedOps);
@@ -467,14 +467,14 @@ void runSortedScan(
 
     uint8_t* payload = makePayload(payloadSize);
 
-    client.run("FLUSHALL");
+    client.run("FLUSHALL").orThrow();
     {
         // insert
         e.setParam("op", "sorted_scan_init");
         if (!dryRun)
             for (uint64_t i = 0; i < keyCount; i++) {
                 const auto key = data[i];
-                client.run("SET %s %s", key.c_str(), PAYLOAD.c_str());
+                client.run("SET %s %s", key.c_str(), PAYLOAD.c_str()).orThrow();
             }
     }
     uint8_t keyBuffer[BTreeNode::maxKVSize];

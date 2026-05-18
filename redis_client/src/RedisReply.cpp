@@ -23,6 +23,13 @@ void RedisReply::assertType(const RedisType type) const {
     }
 }
 
+RedisReply& RedisReply::orThrow() {
+    if (is(RedisType::ERROR)) {
+        throw std::runtime_error(std::format("RESP-Error returned executing command: {}", reply->str));
+    }
+    return *this;
+}
+
 std::string RedisReply::getStatus() const {
     assertType(RedisType::STATUS);
     return {reply->str};

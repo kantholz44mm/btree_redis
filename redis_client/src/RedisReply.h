@@ -33,6 +33,8 @@ public:
     bool is(RedisType type) const;
     void assertType(RedisType type) const;
 
+    RedisReply& orThrow();
+
     /* AKA simple string*/
     std::string getStatus() const;
     std::string getString() const;
