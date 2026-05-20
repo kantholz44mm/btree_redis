@@ -3,7 +3,7 @@ import random
 while True:
     scale = random.random()
     for pl_size in [6,8,12]:
-        for d in [['int', 25_000_000], ['rng4', 25_000_000], ['data/urls-short', 4273260], ['data/wiki', 9818360]]:
+        for d in [['int', 25_000_000], ['rng4', 25_000_000], ['data/urls-short', 3766956], ['data/wiki', 13816679]]:
             for config in ["baseline", "prefix", "heads", "hints"]:
                 path = (f'named-build/{config}-n3-ycsb')
                 size = d[1] / 16**scale

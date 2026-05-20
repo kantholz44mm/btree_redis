@@ -6,7 +6,7 @@ def print_work(data, config, id, ycsb, psl, psi, sl=100, op=int(1e7), pl=8):
 for run_id in range(3):
     for workload in [3, 5]:
         for config in ["baseline", "dense1", "dense2", "dense3", "hash", "heads", "hints", "inner", "prefix"]:
-            for d in [['int', 25_000_000], ['rng4', 25_000_000], ['data/urls-short', 4273260], ['data/wiki', 9818360]]:
+            for d in [['int', 25_000_000], ['rng4', 25_000_000], ['data/urls-short', 3766956], ['data/wiki', 13816679]]:
                 for var_size_b in range(8, 16):
                     var_size = 2 ** var_size_b
                     if d[0] in ['int', 'rng4'] or var_size_b >= 10:

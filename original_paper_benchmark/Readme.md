@@ -63,10 +63,13 @@ env: ‘page-size-builds/_DPS_I_8192__DPS_L_4096/dense3-n3-ycsb’: No such file
 ```
 if the shell script `./build_all_var_page_size.sh` was not executed (it builds the project multiple times with different node sizes)
 
+# problem "Error opening counter cycle"
+If you get a problem "Error opening counter cycle", it apparently comes from perf. 
+`sudo sysctl -w kernel.perf_event_paranoid=0` is the solution, it gives full access to HW counters
+
 # Benchmark duration
 
-Hardware Specs:
-
+Hardware Specs: ...TODO
 
 |Benchmark file | Starting time | End time | Duration |
 |---|---|---|---|
@@ -97,3 +100,26 @@ Examples can be found as comments in the script file.
 Each subdirectory of the `R` directory contains python scripts to generate benchmarks, results of said benchmarks as csv files, and R code to analyze the results.
 The output of each python script is a sequence of program invocations, intended to be piped into GNU parallel.
 The csv file containing the results is generally named after the python script that produced it.
+
+
+
+
+# Gespäch mit Piepmeyer
+
+## Erkenntnisse:
+- Reproduzierbarkeit einzelner Benchmarkingergebnisse möglich
+- Reproduzierbarkeit aller Graphen nicht möglich:
+  - Unübersichtlichkeit und Inhomogenität der Build-Strukturen:
+    - 32 Python Skripte, welche "Benchmarks generieren"
+      - Siehe joblog
+  - Nichtverfolgbarkeit der Herkunft & Benennung der Graphen im Paper
+
+- Neuschreiben der tests in python selbe logik besser verpackt (niemand versteht R)
+- Anzweifel der sinnhaftigheit (random number generator in ycsb.cpp:448)
+--> eigene Bechmarks weil:
+    zu komplexe Strucktur / Nameschema zu komplex um sich einzuarbeiten 
+    Reproduzierbarkeit Zitat Matthias "Nein"
+
+Wie weiter arbeiten?
+
+Größe der Datensätze und deren länge sehr wählerich skaliert nicht mit

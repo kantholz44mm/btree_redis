@@ -1,4 +1,4 @@
-for run_id in range(50):
+for run_id in range(1):
     for d in [['data/urls-short',4822840],['data/wiki',13300820],['int',75000000],['rng4',75000000]]:
         for config in ["baseline", "prefix", "heads", "hints", "hash"]:
             path = (f'named-build/{config}-n3-ycsb')

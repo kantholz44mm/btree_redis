@@ -43,10 +43,10 @@ test.elf: $(sources) libwh.so
 # 	-Wall -Wextra -Wpedantic
 
 optimized.elf: $(sources) libwh.so
-	$(cxx) $(test_cpps) -O3  -DNDEBUG $(wh_link_arg)
+	$(cxx) $(test_cpps) -O3  -DDEBUG $(wh_link_arg)
 
 stream.elf: $(sources) stream.cpp libwh.so
-	$(cxx) stream.cpp -O3  -DNDEBUG $(wh_link_arg)
+	$(cxx) stream.cpp -O3  -DDEBUG $(wh_link_arg)
 
 clean:
 	rm -f test.elf optimized.elf asan.elf tpcc-optimzed.elf tpcc-debug.elf
@@ -57,7 +57,7 @@ format:
 	clang-format -i $(cpp_sources) btree/hot_adapter.*
 
 tpcc-optimzed.elf: check-tbb $(sources)
-	$(cxx) $(tpcc_cpps) -O3  -DNDEBUG  -fnon-call-exceptions -fasynchronous-unwind-tables -ltbb
+	$(cxx) $(tpcc_cpps) -O3  -DDEBUG  -fnon-call-exceptions -fasynchronous-unwind-tables -ltbb
 
 tpcc-debug.elf: check-tbb $(sources)
 	$(cxx) $(tpcc_cpps)   -ltbb  -Wall -Wextra -Wpedantic
@@ -74,7 +74,7 @@ zipfc/target/release/libzipfc.a: zipfc/Cargo.toml zipfc/Cargo.lock zipfc/src/lib
 
 named-build/%-n3-tpcc: check-tbb hot-n3.o lits-n3.o libwh.so tlx_build_n3/libTlxWrapper.a $(sources)
 	@mkdir -p named-build
-	$(cxx) $(tpcc_cpps) -O3  -DNDEBUG  -fnon-call-exceptions -fasynchronous-unwind-tables -ltbb $(named_args) hot-n3.o lits-n3.o $(wh_link_arg) -Ltlx_build_n3/ -lTlxWrapper
+	$(cxx) $(tpcc_cpps) -O3  -DDEBUG  -fnon-call-exceptions -fasynchronous-unwind-tables -ltbb $(named_args) hot-n3.o lits-n3.o $(wh_link_arg) -Ltlx_build_n3/ -lTlxWrapper
 
 named-build/%-d3-tpcc: check-tbb hot-d0.o lits-d0.o libwh.so tlx_build_d0/libTlxWrapper.a $(sources)
 	@mkdir -p named-build
@@ -92,12 +92,12 @@ named-build/%-d3-test: hot-d0.o lits-d0.o libwh.so tlx_build_d0/libTlxWrapper.a 
 
 named-build/%-n3-test: hot-n3.o lits-n3.o libwh.so tlx_build_n3/libTlxWrapper.a $(sources)
 	@mkdir -p named-build
-	$(cxx) $(test_cpps) -O3 -DNDEBUG $(named_args) hot-n3.o lits-n3.o $(wh_link_arg) -Ltlx_build_n3/ -lTlxWrapper
+	$(cxx) $(test_cpps) -O3 -DDEBUG $(named_args) hot-n3.o lits-n3.o $(wh_link_arg) -Ltlx_build_n3/ -lTlxWrapper
 
 #### named ycsb
 named-build/%-n3-ycsb: $(sources) hot-n3.o lits-n3.o tlx_build_n3/libTlxWrapper.a zipfc/target/release/libzipfc.a libwh.so
 	@mkdir -p named-build
-	$(cxx) $(ycsb_cpps) -O3 -DNDEBUG $(named_args) $(zipfc_link_arg) -Ltlx_build_n3/ -lTlxWrapper hot-n3.o lits-n3.o
+	$(cxx) $(ycsb_cpps) -O3 -DDEBUG $(named_args) $(zipfc_link_arg) -Ltlx_build_n3/ -lTlxWrapper hot-n3.o lits-n3.o
 
 named-build/%-d0-ycsb: $(sources) hot-d0.o lits-d0.o tlx_build_d0/libTlxWrapper.a zipfc/target/release/libzipfc.a libwh.so
 	@mkdir -p named-build
@@ -112,13 +112,13 @@ hot-d0.o: $(hot_sources)
 	g++ -c btree/hot_adapter.cpp -std=c++17 -o $@ -march=native -g $(hot_includes)
 
 hot-n3.o: $(hot_sources)
-	g++ -c  -DNDEBUG -O3 btree/hot_adapter.cpp -std=c++17 -o $@ -march=native -g $(hot_includes)
+	g++ -c  -DDEBUG -O3 btree/hot_adapter.cpp -std=c++17 -o $@ -march=native -g $(hot_includes)
 
 lits-d0.o: $(lits_sources)
 	g++ -c btree/lits_adapter.cpp -std=c++17 -o $@ -march=native -g
 
 lits-n3.o: $(lits_sources)
-	g++ -c  -DNDEBUG -O3 btree/lits_adapter.cpp -std=c++17 -o $@ -march=native -g
+	g++ -c  -DDEBUG -O3 btree/lits_adapter.cpp -std=c++17 -o $@ -march=native -g
 
 tlx_build_d0/libTlxWrapper.a: .FORCE
 	mkdir -p tlx_build_d0

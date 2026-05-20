@@ -134,8 +134,9 @@ void runMulti(BTreeCppPerfEvent e,
       if (!dryRun)
          random_shuffle(data.begin(), data.end());
       data.resize(keyCount);
+      std::cerr << "ACCEPTABLE: KeyCount: " << keyCount << "; data size: " << data.size() << "; keySizeAcceptable: " << keySizeAcceptable(payloadSize, data) << std::endl;
    } else {
-      std::cerr << "UNACCEPTABLE" << std::endl;
+      std::cerr << "UNACCEPTABLE: KeyCount: " << keyCount << "; data size: " << data.size() << "; keySizeAcceptable: " << keySizeAcceptable(payloadSize, data) << std::endl;
       keyCount = 0;
       opCount = 0;
    }
@@ -222,8 +223,9 @@ void runYcsbC(BTreeCppPerfEvent e, vector<string>& data, unsigned keyCount, unsi
       if (!dryRun)
          random_shuffle(data.begin(), data.end());
       data.resize(keyCount);
+      std::cerr << "ACCEPTABLE: KeyCount: " << keyCount << "; data size: " << data.size() << "; keySizeAcceptable: " << keySizeAcceptable(payloadSize, data) << std::endl;
    } else {
-      std::cerr << "UNACCEPTABLE" << std::endl;
+      std::cerr << "UNACCEPTABLE: KeyCount: " << keyCount << "; data size: " << data.size() << "; keySizeAcceptable: " << keySizeAcceptable(payloadSize, data) << std::endl;
       keyCount = 0;
       opCount = 0;
    }
@@ -273,8 +275,9 @@ void runSortedInsert(BTreeCppPerfEvent e, vector<string>& data, unsigned keyCoun
       if (!dryRun && doSort) {
          std::sort(data.begin(), data.end());
       }
+      std::cerr << "ACCEPTABLE: KeyCount: " << keyCount << "; data size: " << data.size() << "; keySizeAcceptable: " << keySizeAcceptable(payloadSize, data) << std::endl;
    } else {
-      std::cerr << "UNACCEPTABLE" << std::endl;
+      std::cerr << "UNACCEPTABLE: KeyCount: " << keyCount << "; data size: " << data.size() << "; keySizeAcceptable: " << keySizeAcceptable(payloadSize, data) << std::endl;
       keyCount = 0;
    }
 
@@ -307,6 +310,7 @@ bool computeInitialKeyCount(unsigned avgKeyCount,
       initialKeyCount = avgKeyCount - opCount / 40;
       unsigned expectedInsertions = opCount / 20;
       reasonableMaxKeys = initialKeyCount + expectedInsertions * 2;
+      
       if (reasonableMaxKeys <= availableKeyCount) {
          configValid = true;
       } else {
@@ -727,19 +731,9 @@ int main(int argc, char* argv[])
       }
    } else {
       ifstream in(keySet);
-      keySet = "file:" + keySet;
-      if (dryRun && keySet == "file:data/access")
-         data.resize(6625815);
-      else if (dryRun && keySet == "file:data/genome")
-         data.resize(262084);
-      else if (dryRun && keySet == "file:data/urls")
-         data.resize(6393703);
-      else if (dryRun && keySet == "file:data/urls-short")
-         data.resize(6391379);
-      else if (dryRun && keySet == "file:data/wiki")
-         data.resize(15772029);
-      else if (dryRun) {
+      if (dryRun) {
          std::cerr << "key count unknown for [" << keySet << "]" << std::endl;
+         std::cerr << std::flush;
          abort();
       } else {
          string line;
@@ -761,7 +755,7 @@ int main(int argc, char* argv[])
 
    for (unsigned i = 0; i < data.size(); ++i) {
       if (data[i].size() + payloadSize > BTreeNode::maxKVSize) {
-         std::cerr << "key too long for page size" << std::endl;
+         std::cerr << "key too long for page size: " << BTreeNode::maxKVSize << " but got " << data[i].size() << " and " << payloadSize << std::endl;
          // this forces the key count check to fail and emits nan values.
          data.clear();
          keyCount = 1;

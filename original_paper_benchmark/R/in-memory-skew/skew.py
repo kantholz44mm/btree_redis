@@ -1,7 +1,7 @@
 for run_id in range(10):
     for scale in [1,0.25,0.5,0.125,2.0,4.0]:
         for config in ["prefix","heads", "hints", "art", "baseline", "dense1", "dense2", "dense3", "hash","inner", "hot", "tlx","adapt"]:
-            for d in [['int',25_000_000],['rng4',25_000_000],['data/urls-short',4273260],['data/wiki',9818360]]:
+            for d in [['int',25_000_000],['rng4',25_000_000],['data/urls-short',3766956],['data/wiki',13816679]]:
                 for zipf in range(50,151,4):
                     kc = int(d[1]*scale)
                     z=zipf*0.01

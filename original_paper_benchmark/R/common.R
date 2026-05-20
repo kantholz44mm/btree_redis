@@ -11,12 +11,26 @@ library(readr)
 library(RColorBrewer)
 library(ggpattern)
 
+output_dir <- Sys.getenv("R_PLOT_DIR", unset = "out")
+dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
+
+if (Sys.getenv("DISPLAY") == "") {
+  options(device = function(...) pdf(file = NULL, ...))
+
+  View <- function(x, title = deparse(substitute(x)), ...) {
+    message("Headless mode: skipping View() for ", title, ". Showing first rows instead.")
+    print(utils::head(as.data.frame(x), 20))
+    invisible(x)
+  }
+}
+
 format_si <- function(...) {
   # https://stackoverflow.com/a/21089837
   # Based on code by Ben Tupper
   # https://stat.ethz.ch/pipermail/r-help/2012-January/299804.html
 
   function(x) {
+    print(getwd())
     limits <- c(1e-24, 1e-21, 1e-18, 1e-15, 1e-12,
                 1e-9, 1e-6, 1e-3, 1e0, 1e3,
                 1e6, 1e9, 1e12, 1e15, 1e18,
@@ -163,6 +177,23 @@ read_broken_csv <- function(path) {
 }
 
 save_as <- function(name, h, w = 85) {
-  ggsave(path = '~/develop/btree-paper/fig/', device = 'svg', filename = paste0(name, '.svg'), width = w, units = 'mm', height = h)
-  plot
+  svg_path <- file.path(output_dir, paste0(name, '.svg'))
+  png_path <- file.path(output_dir, paste0(name, '.png'))
+
+  ggsave(filename = svg_path, device = 'svg', width = w, units = 'mm', height = h)
+  ggsave(filename = png_path, device = 'png', width = w, units = 'mm', height = h, dpi = 150)
+
+  message("Saved plots: ", svg_path, " and ", png_path)
+  invisible(ggplot2::last_plot())
+}
+
+save_plot_obj <- function(name, plot, h, w = 85, units = 'mm', dpi = 150) {
+  svg_path <- file.path(output_dir, paste0(name, '.svg'))
+  png_path <- file.path(output_dir, paste0(name, '.png'))
+
+  ggsave(filename = svg_path, plot = plot, device = 'svg', width = w, units = units, height = h)
+  ggsave(filename = png_path, plot = plot, device = 'png', width = w, units = units, height = h, dpi = dpi)
+
+  message("Saved plots: ", svg_path, " and ", png_path)
+  invisible(plot)
 }
