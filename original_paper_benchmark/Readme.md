@@ -67,6 +67,18 @@ if the shell script `./build_all_var_page_size.sh` was not executed (it builds t
 If you get a problem "Error opening counter cycle", it apparently comes from perf. 
 `sudo sysctl -w kernel.perf_event_paranoid=0` is the solution, it gives full access to HW counters
 
+# Problem: error while loading shared libraries when they exist
+
+error example:
+```
+python3 R/eval-2/re-eval-dense.py | shuf | parallel -j1 --timeout 600 --joblog joblog-re-eval-dense -- {1} | tee R/eval-2/re-eval-dense.csv
+named-build/dense2-n3-ycsb: error while loading shared libraries: libwh.so: cannot open shared object file: No such file or directory
+named-build/dense3-n3-ycsb: error while loading shared libraries: libwh.so: cannot open shared object file: No such file or directory
+named-build/dense1-n3-ycsb: error while loading shared libraries: libwh.so: cannot open shared object file: No such file or directory
+```
+
+Solution: `export LD_LIBRARY_PATH=$PWD:$LD_LIBRARY_PATH`
+
 # Benchmark duration
 
 Hardware Specs: ...TODO
@@ -115,8 +127,8 @@ The csv file containing the results is generally named after the python script t
   - Nichtverfolgbarkeit der Herkunft & Benennung der Graphen im Paper
 
 - Neuschreiben der tests in python selbe logik besser verpackt (niemand versteht R)
-- Anzweifel der sinnhaftigheit (random number generator in ycsb.cpp:448)
---> eigene Bechmarks weil:
+<!-- - Anzweifel der sinnhaftigheit (random number generator in ycsb.cpp:448) -->
+--> eigene Bechmarks weil (?):
     zu komplexe Strucktur / Nameschema zu komplex um sich einzuarbeiten 
     Reproduzierbarkeit Zitat Matthias "Nein"
 
