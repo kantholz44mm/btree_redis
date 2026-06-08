@@ -564,6 +564,7 @@ void lits_escape_strings(std::vector<std::string>& data) {
 
 int main(int argc, char* argv[]) {
     auto client = RedisClient::connect(getenv("REDIS_HOST"), envu64("REDIS_PORT"));
+    client.run("FLUSHALL").orThrow();
 
     bool dryRun = getenv("DRYRUN");
 

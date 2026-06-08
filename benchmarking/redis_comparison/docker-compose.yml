@@ -1,0 +1,10 @@
+name: redis_comparison
+services:
+  redis:
+    image: "redis:latest"
+    ports:
+      - '6379:6379'
+  btree_server:
+    image: "btree-redis-server:latest"
+    ports:
+      - '3000:3000'
