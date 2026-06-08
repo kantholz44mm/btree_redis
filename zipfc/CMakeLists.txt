@@ -3,15 +3,26 @@ cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
 project(zipfc VERSION 0.1 LANGUAGES CXX)
 
 if(NOT CARGO_PATH)
-    find_program(CARGO_PATH cargo PATHS "~/.cargo/bin")
+    find_program(_CARGO_PATH cargo PATHS "~/.cargo/bin")
+    if(_CARGO_PATH)
+        set(CARGO_PATH ${_CARGO_PATH} CACHE FILEPATH "Path to cargo executable")
+    else()
+        message(STATUS "Note: 'cargo' not found at configure time. The 'build_rust_zipfc' target will fail during build if Cargo is not available or CARGO_PATH isn't set.")
+        set(ZIPFC_CARGO_EXECUTABLE "cargo")
+    endif()
 endif()
-if(NOT CARGO_PATH)
-    message(FATAL_ERROR "Required executable 'cargo' not found on PATH. Please install Rust and Cargo (https://www.rust-lang.org/tools/install) or set the CARGO_PATH CMake variable to the full path of the cargo executable.")
+
+if(NOT DEFINED ZIPFC_CARGO_EXECUTABLE)
+    if(CARGO_PATH)
+        set(ZIPFC_CARGO_EXECUTABLE ${CARGO_PATH})
+    else()
+        set(ZIPFC_CARGO_EXECUTABLE cargo)
+    endif()
 endif()
 
 add_custom_target(
     build_rust_zipfc ALL
-    COMMAND ${CARGO_PATH} build --release
+    COMMAND ${ZIPFC_CARGO_EXECUTABLE} build --release
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMENT "Building Rust library zipfc"
 )

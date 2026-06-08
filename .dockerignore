@@ -1,0 +1,38 @@
+# Ignore CMake and IDE build output to keep Docker build context small
+# This prevents Docker from trying to include build artifacts or symlinks
+
+# CMake build directories
+cmake-build-*/
+build/
+out/
+
+# CMake _deps directories and other generated build deps
+_deps/
+**/_deps/
+
+# Common binary/artifact extensions (exclude if you build inside the repo)
+*.o
+*.obj
+*.so
+*.a
+*.dll
+*.lib
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# IDE/editor
+.git
+.git/
+.vscode/
+.idea/
+*.swp
+*.swo
+*.bak
+*.tmp
+*.user
+
+# OS
+.DS_Store
+

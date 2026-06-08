@@ -3,6 +3,7 @@
 #include <vector>
 #include <memory>
 #include <string>
+#include <ranges>
 
 class resp_connection;
 class resp_value;

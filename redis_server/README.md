@@ -34,3 +34,11 @@ Dieser ist vorkonfiguriert für die Verbindung mit dem offiziellen Redis-Contain
 und dem redis-server auf Port 3000.
 Die Verbindung zu dem Redis-Container ist für Vergleichszwecke möglich.
 Im aktuellen Zustand ist der Server (noch) nicht mit Redis-Insight kompatibel.
+
+## Building
+
+Docker image (im Repo-root ausführen):
+
+```shell
+docker build -f redis_server/Dockerfile -t btree-redis-server:latest .
+```
