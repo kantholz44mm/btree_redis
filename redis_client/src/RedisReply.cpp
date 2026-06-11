@@ -2,11 +2,9 @@
 
 #include <format>
 #include <stdexcept>
+#include <algorithm>
 
-RedisReply::RedisReply(redisReply* reply): reply(reply) {}
-
-RedisReply::~RedisReply() {
-    freeReplyObject(reply);
+RedisReply::RedisReply(const std::shared_ptr<redisReply>& rootReply, redisReply* reply) : rootReply(rootReply), reply(reply) {
 }
 
 RedisType RedisReply::getType() const {
@@ -48,6 +46,16 @@ long long RedisReply::getInt() const {
 std::string RedisReply::getError() const {
     assertType(RedisType::ERROR);
     return {reply->str};
+}
+
+std::vector<RedisReply> RedisReply::getArray() const {
+    assertType(RedisType::ARRAY);
+    auto vec = std::vector<RedisReply>();
+    vec.reserve(reply->elements);
+    std::transform(reply->element, reply->element + reply->elements, std::back_inserter(vec), [&](redisReply* ele) {
+        return RedisReply(rootReply, ele);
+    });
+    return vec;
 }
 
 const char* RedisReply::getTypeName(const RedisType type) {

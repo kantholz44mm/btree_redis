@@ -1,7 +1,10 @@
 #pragma once
 
+#include <memory>
+
 #include "hiredis.h"
 #include <string>
+#include <vector>
 
 enum class RedisType {
     STRING = REDIS_REPLY_STRING,
@@ -22,12 +25,7 @@ enum class RedisType {
 
 class RedisReply {
 public:
-    explicit RedisReply(redisReply* reply);
-    ~RedisReply();
-
-    RedisReply(const RedisReply& other) = delete;
-    RedisReply(RedisReply&& other) = delete;
-    RedisReply& operator=(const RedisReply& other) = delete;
+    RedisReply(const std::shared_ptr<redisReply>& rootReply, redisReply* reply);
 
     RedisType getType() const;
     bool is(RedisType type) const;
@@ -40,8 +38,12 @@ public:
     std::string getString() const;
     long long getInt() const;
     std::string getError() const;
+    std::vector<RedisReply> getArray() const;
 
 private:
     static const char* getTypeName(RedisType type);
+    // if this is an element of an array reply, the rootReply is the array.
+    // It should not be deleted until all children no longer use it, since deletion is recursive.
+    std::shared_ptr<redisReply> rootReply;
     redisReply* reply;
 };
