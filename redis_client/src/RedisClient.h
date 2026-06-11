@@ -10,8 +10,7 @@ class RedisClient {
 public:
     static RedisClient connect(const char* host, int port);
 
-    explicit RedisClient(redisContext* context);
-    ~RedisClient();
+    explicit RedisClient(const std::shared_ptr<redisContext>& context);
 
     RedisClient(const RedisClient& other) = delete;
     RedisClient(RedisClient&& other) = delete;
@@ -21,14 +20,13 @@ public:
     RedisReply run(const char* format, Args...);
 
 private:
-    redisContext* context;
+    RedisReply makeReply(redisReply* reply) const;
+
+    std::shared_ptr<redisContext> context;
 };
 
 template <typename ... Args>
-RedisReply RedisClient::run(const char* format, Args... args) {
-    const auto reply = static_cast<redisReply*>(redisCommand(context, format, args...));
-    if (reply == nullptr) {
-        throw std::runtime_error(std::format("Error sending command \"{}\" (Code {}): {}", format, context->err, context->errstr));
-    }
-    return RedisReply(reply);
+RedisReply RedisClient::run(const char* format, Args... args) const {
+    const auto reply = static_cast<redisReply*>(redisCommand(context.get(), format, args...));
+    return makeReply(reply);
 }
