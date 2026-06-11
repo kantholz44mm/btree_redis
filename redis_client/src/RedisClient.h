@@ -4,7 +4,7 @@
 
 #include "hiredis.h"
 #include "RedisReply.h"
-#include <stdexcept>
+#include <vector>
 
 class RedisClient {
 public:
@@ -17,7 +17,8 @@ public:
     RedisClient& operator=(const RedisClient& other) = delete;
 
     template<typename... Args>
-    RedisReply run(const char* format, Args...);
+    RedisReply run(const char* format, Args...) const;
+    RedisReply run(const std::vector<std::string>& args) const;
 
 private:
     RedisReply makeReply(redisReply* reply) const;
