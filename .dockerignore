@@ -18,9 +18,10 @@ _deps/
 *.dll
 *.lib
 
-# Python cache
+# Python
 __pycache__/
 *.py[cod]
+.venv/
 
 # IDE/editor
 .git

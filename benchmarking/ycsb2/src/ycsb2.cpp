@@ -8,6 +8,7 @@
 #include "btree2020.hpp"
 #include "PerfTImer.h"
 #include "RedisClient.h"
+#include "windowed_iterator.h"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -17,6 +18,19 @@ void zipf_generate(uint32_t, double, uint32_t*, uint32_t, bool);
 void generate_rng4(uint64_t seed, uint32_t count, uint32_t* out);
 void generate_rng8(uint64_t seed, uint32_t count, uint64_t* out);
 }
+
+
+
+struct Options {
+    bool dryRun;
+    uint64_t keyCount;
+    uint64_t keyBatchCount;
+    uint64_t payloadSize;
+    uint64_t opCount;
+    uint64_t opBatchCount;
+    double zipfParameter;
+    uint64_t maxScanLength;
+};
 
 static const std::string PAYLOAD = "PAYLOAD";
 
@@ -88,28 +102,23 @@ void runMulti(
                 PerfTimer& timer,
               RedisClient& client,
               std::vector<std::string>& data,
-              unsigned keyCount,
-              unsigned payloadSize,
-              unsigned opCount,
-              double zipfParameter,
-              unsigned maxScanLength,
-              bool dryRun) {
-    if (keyCount <= data.size() && keySizeAcceptable(payloadSize, data)) {
-        if (!dryRun)
+              Options& options) {
+    if (options.keyCount <= data.size() && keySizeAcceptable(options.payloadSize, data)) {
+        if (!options.dryRun)
             std::random_shuffle(data.begin(), data.end());
-        data.resize(keyCount);
+        data.resize(options.keyCount);
     } else {
         std::cerr << "UNACCEPTABLE" << std::endl;
-        keyCount = 0;
-        opCount = 0;
+        options.keyCount = 0;
+        options.opCount = 0;
     }
 
     client.run("FLUSHALL").orThrow();
 #ifdef USE_STRUCTURE_LITS
     t.impl.bulkInsert(data);
 #endif
-    unsigned preInsertCount = keyCount - keyCount / 10;
-    if (!dryRun)
+    unsigned preInsertCount = options.keyCount - options.keyCount / 10;
+    if (!options.dryRun)
         for (uint64_t i = 0; i < preInsertCount; i++) {
             const auto key = data[i];
             client.run("SET %s %s", key.c_str(), PAYLOAD.c_str()).orThrow();
@@ -119,7 +128,7 @@ void runMulti(
         // insert
         timer.setParam("op", "insert90");
         PerfTimerBlock b(timer);
-        for (uint64_t i = preInsertCount; i < keyCount; i++) {
+        for (uint64_t i = preInsertCount; i < options.keyCount; i++) {
             const auto key = data[i];
             client.run("SET %s %s", key.c_str(), PAYLOAD.c_str()).orThrow();
         }
@@ -128,9 +137,9 @@ void runMulti(
     {
         timer.setParam("op", "ycsb_c");
         PerfTimerBlock b(timer);
-        if (!dryRun)
-            for (uint64_t i = 0; i < opCount; i++) {
-                unsigned keyIndex = zipf_next(keyCount, zipfParameter, false, false);
+        if (!options.dryRun)
+            for (uint64_t i = 0; i < options.opCount; i++) {
+                unsigned keyIndex = zipf_next(options.keyCount, options.zipfParameter, false, false);
                 assert(keyIndex < data.size());
                 const auto key = data[keyIndex];
                 const auto payload = client.run("GET %s", key.c_str()).orThrow().getString();
@@ -172,16 +181,15 @@ void runMulti(
 }
 
 void runYcsbC(
-                PerfTimer& timer, RedisClient& client, std::vector<std::string>& data, unsigned keyCount, unsigned payloadSize,
-              unsigned opCount, double zipfParameter, bool dryRun) {
-    if (keyCount <= data.size() && keySizeAcceptable(payloadSize, data)) {
-        if (!dryRun)
+                PerfTimer& timer, RedisClient& client, std::vector<std::string>& data, Options& options) {
+    if (options.keyCount <= data.size() && keySizeAcceptable(options.payloadSize, data)) {
+        if (!options.dryRun)
             std::random_shuffle(data.begin(), data.end());
-        data.resize(keyCount);
+        data.resize(options.keyCount);
     } else {
         std::cerr << "UNACCEPTABLE" << std::endl;
-        keyCount = 0;
-        opCount = 0;
+        options.keyCount = 0;
+        options.opCount = 0;
     }
 
     client.run("FLUSHALL").orThrow();
@@ -193,41 +201,59 @@ void runYcsbC(
         timer.setParam("op", "ycsb_c_init");
         PerfTimerBlock b(timer);
         // insert
-        if (!dryRun)
-            for (uint64_t i = 0; i < keyCount; i++) {
-                const auto& key = data[i];
-                client.run("SET %s %s", key.c_str(), PAYLOAD.c_str()).orThrow();
+        if (!options.dryRun) {
+            auto msetCommand = std::string("MSET");
+            for (auto window : windowed_iterator(std::span(data).subspan(0, options.keyCount), 100)) {
+                auto args = std::vector<std::reference_wrapper<const std::string>>();
+                args.reserve(window.size() * 2 + 1);
+                args.push_back(msetCommand);
+                for (auto key : window) {
+                    args.push_back(key);
+                    args.push_back(PAYLOAD);
+                }
+                client.run(args).orThrow();
             }
+        }
     }
 
     {
         timer.setParam("op", "ycsb_c");
         PerfTimerBlock b(timer);
-        if (!dryRun)
-            for (uint64_t i = 0; i < opCount; i++) {
-                unsigned keyIndex = zipf_next(keyCount, zipfParameter, false, false);
-                assert(keyIndex < data.size());
-                const auto& key = data[keyIndex];
-                const auto payload = client.run("GET %s", key.c_str()).orThrow().getString();
-                if (payload != PAYLOAD)
-                    throw;
+        if (!options.dryRun) {
+            auto mgetCommand = std::string("MGET");
+            for (int64_t remainingOps = options.opCount; remainingOps >= 0; remainingOps -= options.opBatchCount) {
+                const auto batchSize = std::min(remainingOps, static_cast<int64_t>(options.opBatchCount));
+                auto args = std::vector<std::reference_wrapper<const std::string>>();
+                args.reserve(batchSize + 1);
+                args.push_back(mgetCommand);
+                for (int64_t i = 0; i < batchSize; i++) {
+                    const unsigned keyIndex = zipf_next(options.keyCount, options.zipfParameter, false, false);
+                    assert(keyIndex < data.size());
+                    const auto& key = data[keyIndex];
+                    args.push_back(key);
+                }
+                const auto reply = client.run(args).orThrow();
+                for (auto val : reply.getArray()) {
+                    if (val.getString() != PAYLOAD)
+                        throw;
+                }
             }
+        }
     }
 
     data.clear();
 }
 
 void runSortedInsert(
-                PerfTimer& timer,RedisClient& client, std::vector<std::string>& data, unsigned keyCount, unsigned payloadSize,
-                     bool dryRun, bool doSort = true) {
-    if (keyCount <= data.size() && keySizeAcceptable(payloadSize, data)) {
-        data.resize(keyCount);
-        if (!dryRun && doSort) {
+                PerfTimer& timer,RedisClient& client, std::vector<std::string>& data, Options& options, bool doSort = true) {
+    if (options.keyCount <= data.size() && keySizeAcceptable(options.payloadSize, data)) {
+        data.resize(options.keyCount);
+        if (!options.dryRun && doSort) {
             std::sort(data.begin(), data.end());
         }
     } else {
         std::cerr << "UNACCEPTABLE" << std::endl;
-        keyCount = 0;
+        options.keyCount = 0;
     }
 
 
@@ -236,8 +262,8 @@ void runSortedInsert(
         // insert
         timer.setParam("op", "sorted_insert");
         PerfTimerBlock b(timer);
-        if (!dryRun)
-            for (uint64_t i = 0; i < keyCount; i++) {
+        if (!options.dryRun)
+            for (uint64_t i = 0; i < options.keyCount; i++) {
                 const auto key = data[i];
                 client.run("SET %s %s", key.c_str(), PAYLOAD.c_str()).orThrow();
             }
@@ -271,21 +297,17 @@ void runYcsbD(
                 PerfTimer& timer,
               RedisClient& client,
               std::vector<std::string>& data,
-              unsigned avgKeyCount,
-              unsigned payloadSize,
-              unsigned opCount,
-              double zipfParameter,
-              bool dryRun) {
+              Options& options) {
     unsigned initialKeyCount = 0;
     unsigned reasonableMaxKeys = 0;
-    if (!computeInitialKeyCount(avgKeyCount, data.size(), opCount, initialKeyCount, reasonableMaxKeys) || !
-        keySizeAcceptable(payloadSize, data)) {
-        opCount = 0;
+    if (!computeInitialKeyCount(options.keyCount, data.size(), options.opCount, initialKeyCount, reasonableMaxKeys) || !
+        keySizeAcceptable(options.payloadSize, data)) {
+        options.opCount = 0;
         initialKeyCount = 0;
         data.resize(0);
     }
 
-    if (!dryRun)
+    if (!options.dryRun)
         std::random_shuffle(data.begin(), data.end());
 
     client.run("FLUSHALL").orThrow();
@@ -293,7 +315,7 @@ void runYcsbD(
         timer.setParam("op", "ycsb_d_init");
         PerfTimerBlock b(timer);
         // insert
-        if (!dryRun)
+        if (!options.dryRun)
             for (uint64_t i = 0; i < initialKeyCount; i++) {
                 const auto key = data[i];
                 client.run("SET %s %s", key.c_str(), PAYLOAD.c_str()).orThrow();
@@ -304,8 +326,8 @@ void runYcsbD(
     {
         timer.setParam("op", "ycsb_d");
         PerfTimerBlock b(timer);
-        if (!dryRun)
-            for (uint64_t completedOps = 0; completedOps < opCount; ++completedOps) {
+        if (!options.dryRun)
+            for (uint64_t completedOps = 0; completedOps < options.opCount; ++completedOps) {
                 if (op_next()) {
                     if (insertedCount == data.size()) {
                         std::cerr << "exhausted keys for insertion" << std::endl;
@@ -315,7 +337,7 @@ void runYcsbD(
                     client.run("SET %s %s", key.c_str(), PAYLOAD.c_str()).orThrow();
                     ++insertedCount;
                 } else {
-                    unsigned zipfSample = zipf_next(insertedCount, zipfParameter, false, true);
+                    unsigned zipfSample = zipf_next(insertedCount, options.zipfParameter, false, true);
                     unsigned keyIndex = insertedCount - 1 - zipfSample;
                     const auto& key = data[keyIndex];
                     const auto payload = client.run("GET %s", key.c_str()).orThrow().getString();
@@ -330,22 +352,17 @@ void runYcsbE(
                 PerfTimer& timer,
               RedisClient& client,
               std::vector<std::string>& data,
-              unsigned avgKeyCount,
-              unsigned payloadSize,
-              unsigned opCount,
-              unsigned maxScanLength,
-              double zipfParameter,
-              bool dryRun) {
+              Options& options) {
     unsigned initialKeyCount = 0;
     unsigned reasonableMaxKeys = 0;
-    if (!computeInitialKeyCount(avgKeyCount, data.size(), opCount, initialKeyCount, reasonableMaxKeys) || !
-        keySizeAcceptable(payloadSize, data)) {
-        opCount = 0;
+    if (!computeInitialKeyCount(options.keyCount, data.size(), options.opCount, initialKeyCount, reasonableMaxKeys) || !
+        keySizeAcceptable(options.payloadSize, data)) {
+        options.opCount = 0;
         initialKeyCount = 0;
         data.resize(0);
     }
 
-    if (!dryRun)
+    if (!options.dryRun)
         std::random_shuffle(data.begin(), data.end());
     if (data.size() > 0) {
         // permute zipf indices
@@ -361,7 +378,7 @@ void runYcsbE(
         timer.setParam("op", "ycsb_e_init");
         PerfTimerBlock b(timer);
         // insert
-        if (!dryRun)
+        if (!options.dryRun)
             for (uint64_t i = 0; i < initialKeyCount; i++) {
                 const auto key = data[i];
                 client.run("SET %s %s", key.c_str(), PAYLOAD.c_str()).orThrow();
@@ -369,15 +386,15 @@ void runYcsbE(
     }
 
     std::minstd_rand generator(std::rand());
-    std::uniform_int_distribution<unsigned> scanLengthDistribution{1, maxScanLength};
+    std::uniform_int_distribution<unsigned> scanLengthDistribution{1, options.maxScanLength};
 
     unsigned insertedCount = initialKeyCount;
     unsigned sampleIndex = 0;
     {
         timer.setParam("op", "ycsb_e");
         PerfTimerBlock b(timer);
-        if (!dryRun)
-            for (uint64_t completedOps = 0; completedOps < opCount; ++completedOps, ++sampleIndex) {
+        if (!options.dryRun)
+            for (uint64_t completedOps = 0; completedOps < options.opCount; ++completedOps, ++sampleIndex) {
                 if (op_next()) {
                     // printf("insert :%lu\n",completedOps);
                     if (insertedCount == reasonableMaxKeys) {
@@ -392,7 +409,7 @@ void runYcsbE(
                     unsigned scanLength = scanLengthDistribution(generator);
                     while (true) {
                         // num_keys for zipf distribution must remain constant to not mess with shuffling permutation.
-                        unsigned keyIndex = zipf_next(reasonableMaxKeys, zipfParameter, true, true);
+                        unsigned keyIndex = zipf_next(reasonableMaxKeys, options.zipfParameter, true, true);
                         // COUNTER(zipf_reject_rate_E, keyIndex >= insertedCount, 1 << 10);
                         if (keyIndex < insertedCount) {
                             // TODO range lookups are not part of the redis protocol for standard key value stores
@@ -424,20 +441,15 @@ void runSortedScan(
                 PerfTimer& timer,
     RedisClient& client,
     std::vector<std::string>& data,
-    unsigned keyCount,
-    unsigned payloadSize,
-    unsigned opCount,
-    unsigned maxScanLength,
-    double zipfParameter,
-    bool dryRun) {
-    if (keyCount <= data.size()) {
-        if (!dryRun)
+    Options& options) {
+    if (options.keyCount <= data.size()) {
+        if (!options.dryRun)
             std::random_shuffle(data.begin(), data.end());
-        data.resize(keyCount);
+        data.resize(options.keyCount);
     } else {
         std::cerr << "not enough keys" << std::endl;
-        keyCount = 0;
-        opCount = 0;
+        options.keyCount = 0;
+        options.opCount = 0;
     }
 
     client.run("FLUSHALL").orThrow();
@@ -445,15 +457,15 @@ void runSortedScan(
         timer.setParam("op", "sorted_scan_init");
         PerfTimerBlock b(timer);
         // insert
-        if (!dryRun)
-            for (uint64_t i = 0; i < keyCount; i++) {
+        if (!options.dryRun)
+            for (uint64_t i = 0; i < options.keyCount; i++) {
                 const auto key = data[i];
                 client.run("SET %s %s", key.c_str(), PAYLOAD.c_str()).orThrow();
             }
     }
     uint8_t keyBuffer[BTreeNode::maxKVSize];
     std::minstd_rand generator(std::rand());
-    std::uniform_int_distribution<unsigned> scanLengthDistribution{1, maxScanLength};
+    std::uniform_int_distribution<unsigned> scanLengthDistribution{1, options.maxScanLength};
 
     // TODO range scan not supported
     /*
@@ -566,13 +578,20 @@ int main(int argc, char* argv[]) {
     auto client = RedisClient::connect(getenv("REDIS_HOST"), envu64("REDIS_PORT"));
     client.run("FLUSHALL").orThrow();
 
-    bool dryRun = getenv("DRYRUN");
 
-    std::vector<std::string> data;
+    Options options = {
+        .dryRun = getenv("DRYRUN") != nullptr,
+        .keyCount = envu64("KEY_COUNT"),
+        .keyBatchCount = envu64("KEY_BATCH_COUNT"),
+        .payloadSize = envu64("PAYLOAD_SIZE"),
+        .opCount = envu64("OP_COUNT"),
+        .opBatchCount = envu64("OP_BATCH_COUNT"),
+        .zipfParameter = envf64("ZIPF"),
+        .maxScanLength = envu64("SCAN_LENGTH")
+    };
 
     unsigned rand_seed = getenv("SEED") ? envu64("SEED") : time(NULL);
     srand(rand_seed);
-    unsigned keyCount = envu64("KEY_COUNT");
     if (!getenv("DATA")) {
         std::cerr << "no keyset" << std::endl;
         abort();
@@ -587,25 +606,23 @@ int main(int argc, char* argv[]) {
         run_id = timestmap;
     }
     std::string keySet = getenv("DATA");
-    unsigned payloadSize = envu64("PAYLOAD_SIZE");
-    unsigned opCount = envu64("OP_COUNT");
-    double zipfParameter = envf64("ZIPF");
     double intDensity = envf64("DENSITY");
 
 
 
-    PerfTimer timer = makePerfTimer(keySet, false, keyCount);
-    timer.setParam("payload_size", payloadSize);
+    PerfTimer timer = makePerfTimer(keySet, false, options.keyCount);
+    timer.setParam("payload_size", options.payloadSize);
     timer.setParam("run_id", run_id);
-    timer.setParam("ycsb_zipf", zipfParameter);
+    timer.setParam("ycsb_zipf", options.zipfParameter);
     timer.setParam("bin_name", std::string{argv[0]});
     timer.setParam("density", intDensity);
     timer.setParam("rand_seed", rand_seed);
-    unsigned maxScanLength = envu64("SCAN_LENGTH");
-    if (maxScanLength == 0) {
+    if (options.maxScanLength == 0) {
         throw;
     }
-    timer.setParam("ycsb_range_len", maxScanLength);
+    timer.setParam("ycsb_range_len", options.maxScanLength);
+
+    std::vector<std::string> data;
 
     if (keySet == "int") {
         std::random_device rd;
@@ -615,9 +632,9 @@ int main(int argc, char* argv[]) {
 
         // Generate a random boolean value
         bool result = dist(gen);
-        unsigned genCount = workloadGenCount(keyCount, opCount, envu64("YCSB_VARIANT")) / intDensity;
+        unsigned genCount = workloadGenCount(options.keyCount, options.opCount, envu64("YCSB_VARIANT")) / intDensity;
         std::vector<uint32_t> v;
-        if (dryRun) {
+        if (options.dryRun) {
             data.resize(genCount);
         } else {
             data.reserve(genCount);
@@ -625,8 +642,8 @@ int main(int argc, char* argv[]) {
                 data.push_back(int_to_key(i));
         }
     } else if (keySet == "rng4") {
-        unsigned genCount = workloadGenCount(keyCount, opCount, envu64("YCSB_VARIANT"));
-        if (dryRun) {
+        unsigned genCount = workloadGenCount(options.keyCount, options.opCount, envu64("YCSB_VARIANT"));
+        if (options.dryRun) {
             data.resize(genCount);
         } else {
             std::vector<uint32_t> v;
@@ -638,8 +655,8 @@ int main(int argc, char* argv[]) {
             }
         }
     } else if (keySet == "rng8") {
-        unsigned genCount = workloadGenCount(keyCount, opCount, envu64("YCSB_VARIANT"));
-        if (dryRun) {
+        unsigned genCount = workloadGenCount(options.keyCount, options.opCount, envu64("YCSB_VARIANT"));
+        if (options.dryRun) {
             data.resize(genCount);
         } else {
             std::vector<uint64_t> v;
@@ -654,21 +671,21 @@ int main(int argc, char* argv[]) {
             }
         }
     } else if (keySet == "long1") {
-        for (unsigned i = 0; i < keyCount; i++) {
+        for (unsigned i = 0; i < options.keyCount; i++) {
             std::string s;
             for (unsigned j = 0; j < i; j++)
                 s.push_back('A');
             data.push_back(s);
         }
     } else if (keySet == "long2") {
-        for (unsigned i = 0; i < keyCount; i++) {
+        for (unsigned i = 0; i < options.keyCount; i++) {
             std::string s;
             for (unsigned j = 0; j < i; j++)
                 s.push_back('A' + random() % 60);
             data.push_back(s);
         }
     } else if (keySet == "partitioned_id") {
-        unsigned partitionCount = maxScanLength;
+        unsigned partitionCount = options.maxScanLength;
         std::vector<uint32_t> next_id;
         for (unsigned i = 0; i < partitionCount; ++i)
             next_id.push_back(0);
@@ -676,8 +693,8 @@ int main(int argc, char* argv[]) {
         std::mt19937 gen(rand_seed);
         std::uniform_int_distribution dist(uint32_t(0), uint32_t(partitionCount - 1));
 
-        data.reserve(keyCount);
-        for (uint32_t i = 0; i < keyCount; i++) {
+        data.reserve(options.keyCount);
+        for (uint32_t i = 0; i < options.keyCount; i++) {
             uint64_t partition = dist(gen);
             uint64_t id = next_id[partition]++;
             union {
@@ -690,23 +707,23 @@ int main(int argc, char* argv[]) {
     } else {
         std::ifstream in(keySet);
         keySet = "file:" + keySet;
-        if (dryRun && keySet == "file:data/access")
+        if (options.dryRun && keySet == "file:data/access")
             data.resize(6625815);
-        else if (dryRun && keySet == "file:data/genome")
+        else if (options.dryRun && keySet == "file:data/genome")
             data.resize(262084);
-        else if (dryRun && keySet == "file:data/urls")
+        else if (options.dryRun && keySet == "file:data/urls")
             data.resize(6393703);
-        else if (dryRun && keySet == "file:data/urls-short")
+        else if (options.dryRun && keySet == "file:data/urls-short")
             data.resize(6391379);
-        else if (dryRun && keySet == "file:data/wiki")
+        else if (options.dryRun && keySet == "file:data/wiki")
             data.resize(15772029);
-        else if (dryRun) {
+        else if (options.dryRun) {
             std::cerr << "key count unknown for [" << keySet << "]" << std::endl;
             abort();
         } else {
             std::string line;
             while (getline(in, line)) {
-                if (dryRun) {
+                if (options.dryRun) {
                     data.emplace_back();
                 } else {
                     if (configName == std::string{"art"})
@@ -722,11 +739,11 @@ int main(int argc, char* argv[]) {
 #endif
 
     for (unsigned i = 0; i < data.size(); ++i) {
-        if (data[i].size() + payloadSize > BTreeNode::maxKVSize) {
+        if (data[i].size() + options.payloadSize > BTreeNode::maxKVSize) {
             std::cerr << "key too long for page size" << std::endl;
             // this forces the key count check to fail and emits nan values.
             data.clear();
-            keyCount = 1;
+            options.keyCount = 1;
             break;
         }
     }
@@ -734,37 +751,37 @@ int main(int argc, char* argv[]) {
     switch (envu64("YCSB_VARIANT")) {
     case 3:
         {
-            runYcsbC(timer, client, data, keyCount, payloadSize, opCount, zipfParameter, dryRun);
+            runYcsbC(timer, client, data, options);
             break;
         }
     case 4:
         {
-            runYcsbD(timer, client, data, keyCount, payloadSize, opCount, zipfParameter, dryRun);
+            runYcsbD(timer, client, data, options);
             break;
         }
     case 401:
         {
-            runSortedInsert(timer, client, data, keyCount, payloadSize, dryRun);
+            runSortedInsert(timer, client, data, options);
             break;
         }
     case 402:
         {
-            runSortedInsert(timer, client, data, keyCount, payloadSize, dryRun, false);
+            runSortedInsert(timer, client, data, options, false);
             break;
         }
     case 5:
         {
-            runYcsbE(timer, client, data, keyCount, payloadSize, opCount, maxScanLength, zipfParameter, dryRun);
+            runYcsbE(timer, client, data, options);
             break;
         }
     case 501:
         {
-            runSortedScan(timer, client, data, keyCount, payloadSize, opCount, maxScanLength, zipfParameter, dryRun);
+            runSortedScan(timer, client, data, options);
             break;
         }
     case 6:
         {
-            runMulti(timer, client, data, keyCount, payloadSize, opCount, zipfParameter, maxScanLength, dryRun);
+            runMulti(timer, client, data, options);
             break;
         }
     default:

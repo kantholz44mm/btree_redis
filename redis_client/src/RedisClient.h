@@ -4,7 +4,7 @@
 
 #include "hiredis.h"
 #include "RedisReply.h"
-#include <vector>
+#include <span>
 
 class RedisClient {
 public:
@@ -18,7 +18,7 @@ public:
 
     template<typename... Args>
     RedisReply run(const char* format, Args...) const;
-    RedisReply run(const std::vector<std::string>& args) const;
+    RedisReply run(const std::span<std::reference_wrapper<const std::string>>& args) const;
 
 private:
     RedisReply makeReply(redisReply* reply) const;

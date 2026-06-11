@@ -21,14 +21,14 @@ RedisClient RedisClient::connect(const char* host, const int port) {
 
 RedisClient::RedisClient(const std::shared_ptr<redisContext>& context): context(context) {}
 
-RedisReply RedisClient::run(const std::vector<std::string>& args) const {
+RedisReply RedisClient::run(const std::span<std::reference_wrapper<const std::string>>& args) const {
     const auto argv = std::make_unique<const char*[]>(args.size());
     const auto argc = std::make_unique<size_t[]>(args.size());
     auto argvIter = argv.get();
     auto argcIter = argc.get();
     for (const auto& arg : args) {
-        *argvIter++ = arg.c_str();
-        *argcIter++ = arg.size();
+        *argvIter++ = arg.get().c_str();
+        *argcIter++ = arg.get().size();
     }
     const auto reply = static_cast<redisReply*>(redisCommandArgv(context.get(), args.size(), argv.get(), argc.get()));
     return makeReply(reply);
