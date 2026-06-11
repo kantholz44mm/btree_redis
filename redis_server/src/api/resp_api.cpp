@@ -74,6 +74,14 @@ void resp_api::processCommand(const resp_command_context& command) const {
         onDecrBy(command);
         return;
     }
+    if (command.argIs(0, "mget")) {
+        onMGet(command);
+        return;
+    }
+    if (command.argIs(0, "mset")) {
+        onMSet(command);
+        return;
+    }
 
     if (command.argIs(0, "flushall")) {
         onFlushAll(command);
@@ -251,6 +259,25 @@ void resp_api::onDecrBy(const resp_command_context& command) const {
         return;
     }
     command.respond(resp_value::integer(*result));
+}
+
+/** https://redis.io/docs/latest/commands/mget/ */
+void resp_api::onMGet(const resp_command_context& command) const {
+    const auto keys = command.getArgs(1);
+    auto result = api.mget(keys);
+    auto responseArr = std::vector<resp_value>();
+    responseArr.reserve(result.size());
+    std::ranges::transform(result, std::back_inserter(responseArr), [](const std::shared_ptr<std::string>& val) {
+        return resp_value::bulk_string(val);
+    });
+    command.respond(resp_value::array(responseArr));
+}
+
+/** https://redis.io/docs/latest/commands/mset/ */
+void resp_api::onMSet(const resp_command_context& command) const {
+    const auto kvPairs = command.getArgs(1);
+    api.mset(kvPairs);
+    command.respondOk();
 }
 
 /** https://redis.io/docs/latest/commands/flushall/ */

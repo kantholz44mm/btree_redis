@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <ranges>
+#include <span>
 
 class resp_connection;
 class resp_value;
@@ -22,6 +23,9 @@ public:
 
     bool argIs(size_t arg, const char* str) const;
     [[nodiscard]] std::shared_ptr<std::string> getArgOrNull(size_t arg) const;
+    std::span<const resp_value> getArgs(size_t start) const;
+    std::span<const resp_value> getArgs(size_t start, size_t end) const;
+
 
     [[nodiscard]] const std::vector<resp_value>& getCommand() const;
     std::ranges::subrange<std::vector<resp_value>::const_iterator> varArgs(size_t start) const;

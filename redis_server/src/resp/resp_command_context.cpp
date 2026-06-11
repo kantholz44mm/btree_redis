@@ -2,6 +2,7 @@
 
 #include <boost/algorithm/string.hpp>
 #include "resp_connection.h"
+#include <span>
 
 resp_command_context::resp_command_context(const std::vector<resp_value>& command,
                                            resp_connection& connection) :
@@ -35,6 +36,14 @@ std::shared_ptr<std::string> resp_command_context::getArgOrNull(const size_t arg
         return command[arg].getAsString();
     }
     return {nullptr};
+}
+
+std::span<const resp_value> resp_command_context::getArgs(const size_t start) const {
+    return std::span(command.begin(), command.end()).subspan(start);
+}
+
+std::span<const resp_value> resp_command_context::getArgs(const size_t start, const size_t end) const {
+    return std::span(command.begin(), command.end()).subspan(start, end - start);
 }
 
 const std::vector<resp_value>& resp_command_context::getCommand() const {

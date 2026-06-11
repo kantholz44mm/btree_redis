@@ -22,6 +22,8 @@ public:
     void onIncrBy(const resp_command_context& command) const;
     void onDecr(const resp_command_context& command) const;
     void onDecrBy(const resp_command_context& command) const;
+    void onMGet(const resp_command_context& command) const;
+    void onMSet(const resp_command_context& command) const;
 
     void onFlushAll(const resp_command_context& command) const;
 

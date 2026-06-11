@@ -1,6 +1,9 @@
 #include "api_impl.h"
 
 #include <optional>
+#include <algorithm>
+
+#include "../resp/resp_types.h"
 
 api_impl::api_impl(DataStructureWrapper& btree): btree(btree) {
 }
@@ -51,6 +54,27 @@ std::optional<int64_t> api_impl::increment(std::string& key, const int64_t amoun
         reinterpret_cast<uint8_t*>(incrementedVal.data()), incrementedVal.length()
     );
     return {intVal};
+}
+
+std::vector<std::shared_ptr<std::string>> api_impl::mget(std::span<const resp_value> keys) const {
+    auto result = std::vector<std::shared_ptr<std::string>>();
+    result.reserve(keys.size());
+    std::ranges::transform(keys, std::back_inserter(result), [&](const resp_value& key) {
+        return get(*key.getAsString());
+    });
+    return result;
+}
+
+void api_impl::mset(std::span<const resp_value> kvPairs) const {
+    auto iter = kvPairs.begin();
+    while (iter != kvPairs.end()) {
+        auto& key = *iter->getAsString();
+        ++iter;
+        if (iter == kvPairs.end()) break;
+        auto& val = *iter->getAsString();
+        set(key, val);
+        ++iter;
+    }
 }
 
 void api_impl::flushAll() const {

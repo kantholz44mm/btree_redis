@@ -20,4 +20,12 @@ int main() {
 
     const auto finalGetReply = client.run("GET %s", key);
     std::cout << (finalGetReply.is(RedisType::NIL) ? "nil" : finalGetReply.getStatus()) << std::endl;
+
+    client.run({"MSET", "key1", "val1", "key2", "val2", "key3", "val3" }).orThrow();
+    const auto mgetVals = client.run({"MGET", "key1", "key2", "key3"});
+    const auto vals = mgetVals.getArray();
+    std::cout << "MGET:" << std::endl;
+    for (const auto& val : vals) {
+        std::cout << val.getString() << std::endl;
+    }
 }
