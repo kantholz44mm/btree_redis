@@ -18,7 +18,7 @@ BTREE_PORT = '3000'
 DATA = 'rng4'
 # DATA = PROJECT_ROOT / 'data' / 'wikipedia_titles.txt'
 
-def run_ycsb(executable: str, port: str, data: str, keyCount: int, opCount: int) -> pd.DataFrame:
+def run_ycsb(executable: str, port: str, data: str, keyCount: int, opCount: int, opBatchCount: int = 200, keyBatchCount = 200) -> pd.DataFrame:
     env = os.environ.copy()
     env.update({
         'REDIS_HOST': '127.0.0.1',
@@ -26,9 +26,9 @@ def run_ycsb(executable: str, port: str, data: str, keyCount: int, opCount: int)
         'DATA': data,
         'DENSITY': '0.5',
         'KEY_COUNT': str(keyCount),
-        'KEY_BATCH_COUNT': str(keyCount),
-        'OP_COUNT': str(300),
-        'OP_BATCH_COUNT': str(300),
+        'KEY_BATCH_COUNT': str(keyBatchCount),
+        'OP_COUNT': str(opCount),
+        'OP_BATCH_COUNT': str(opBatchCount),
         'PAYLOAD_SIZE': '10',
         'RUN_ID': str(uuid.uuid4()),
         'SCAN_LENGTH': '100',

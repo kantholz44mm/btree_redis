@@ -1,13 +1,17 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-from benchmarking.redis_comparison.ycsb2 import OUT_DIR
+import sys
+import time
 
-from ycsb2 import BTREE_PORT, REDIS_PORT, run_ycsb, YCSB_EXECUTABLE, DATA
+from ycsb2 import BTREE_PORT, REDIS_PORT, run_ycsb, YCSB_EXECUTABLE, DATA, OUT_DIR
+
+MIN = int(sys.argv[2] or 10)
+MAX = int(sys.argv[3] or 20)
 
 def ycsb2c_insert():
     dfs: list[pd.DataFrame] = []
-    for keyCount in map(lambda n: 2 ** n, range(10, 20)):
+    for keyCount in map(lambda n: 2 ** n, range(MIN, MAX)):
         for type in ['btree', 'redis']:
             port = BTREE_PORT if type == 'btree' else REDIS_PORT
             data = run_ycsb(YCSB_EXECUTABLE, port, DATA, keyCount, 0)
@@ -16,6 +20,8 @@ def ycsb2c_insert():
             data['key_count'] = keyCount
 
             dfs.append(data)
+
+            time.sleep(1)
 
     data = pd.concat(dfs)
 
@@ -60,7 +66,7 @@ def ycsb2c_insert():
     for i, col in enumerate(pivot.columns):
         ax.bar(x + i * width, pivot[col].values, width, label=str(col))
 
-    ax.set_xlabel('key_count')
+    ax.set_xlabel('Inserted key count')
     ax.set_ylabel('Duration')
     ax.set_title('Duration for key_count key insertions')
     ax.set_xticks(x + width * (num_sources - 1) / 2)
