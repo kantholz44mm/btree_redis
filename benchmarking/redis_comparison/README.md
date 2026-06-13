@@ -37,7 +37,7 @@ sudo systemctl start redis-server
 Starting a BTree Server instance:
 
 ```shell
-build/redi_server/redis_server
+build/redis_server/redis_server
 ```
 
 Checking both instances:
