@@ -8,7 +8,6 @@
 #include "btree2020.hpp"
 #include "PerfTImer.h"
 #include "RedisClient.h"
-#include "windowed_iterator.h"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -203,13 +202,14 @@ void runYcsbC(
         // insert
         if (!options.dryRun) {
             auto msetCommand = std::string("MSET");
-            for (auto window : windowed_iterator(std::span(data).subspan(0, options.keyCount), 100)) {
+            for (uint64_t keyIndex = 0; keyIndex < options.keyCount; keyIndex += options.keyBatchCount) {
+                auto batch = std::span(data).subspan(keyIndex, std::min(keyIndex + options.keyBatchCount, options.keyCount) - keyIndex);
                 auto args = std::vector<std::reference_wrapper<const std::string>>();
-                args.reserve(window.size() * 2 + 1);
-                args.push_back(msetCommand);
-                for (auto key : window) {
-                    args.push_back(key);
-                    args.push_back(PAYLOAD);
+                args.reserve(batch.size() * 2 + 1);
+                args.emplace_back(msetCommand);
+                for (auto& key : batch) {
+                    args.emplace_back(key);
+                    args.emplace_back(PAYLOAD);
                 }
                 client.run(args).orThrow();
             }
@@ -221,16 +221,16 @@ void runYcsbC(
         PerfTimerBlock b(timer);
         if (!options.dryRun) {
             auto mgetCommand = std::string("MGET");
-            for (int64_t remainingOps = options.opCount; remainingOps >= 0; remainingOps -= options.opBatchCount) {
+            for (int64_t remainingOps = options.opCount; remainingOps > 0; remainingOps -= options.opBatchCount) {
                 const auto batchSize = std::min(remainingOps, static_cast<int64_t>(options.opBatchCount));
                 auto args = std::vector<std::reference_wrapper<const std::string>>();
                 args.reserve(batchSize + 1);
-                args.push_back(mgetCommand);
+                args.emplace_back(mgetCommand);
                 for (int64_t i = 0; i < batchSize; i++) {
                     const unsigned keyIndex = zipf_next(options.keyCount, options.zipfParameter, false, false);
                     assert(keyIndex < data.size());
                     const auto& key = data[keyIndex];
-                    args.push_back(key);
+                    args.emplace_back(key);
                 }
                 const auto reply = client.run(args).orThrow();
                 for (auto val : reply.getArray()) {
