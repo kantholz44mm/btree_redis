@@ -295,7 +295,7 @@ void resp_api::logCommand(const resp_command_context& command) const {
         truncated = command.getCommand().size() - args.size();
     }
     auto now = std::chrono::system_clock::now();
-    std::cout << std::format("{0:%F_%H-%M-%S} Received command: ", now);
+    std::cout << std::format("{0:%F_%T} Received command: ", now);
     for (const auto& val : args) {
         if (val.isBulkString()) {
             std::cout << '"' << *val.getAsString() << "\"  ";

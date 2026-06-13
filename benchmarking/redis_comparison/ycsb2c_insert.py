@@ -54,7 +54,7 @@ def ycsb2c_insert():
     pivot = long_df.groupby(['key_count', 'source'])['duration'].mean().unstack(fill_value=0)
     pivot = pivot.sort_index()
 
-    out_path = OUT_DIR / f'insert_duration_by_key_count_{datetime.datetime.now().isoformat()}.png'
+    out_path = OUT_DIR / f'insert_duration_by_key_count_{datetime.datetime.now().isoformat().replace(':', '-')}.png'
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     fig, ax = plt.subplots(figsize=(12, 6))
