@@ -8,6 +8,12 @@ Build the YCSB Target:
 cmake --build ./build --target ycsb2 -- -j 14
 ```
 
+Build the redis_server:
+
+```shell
+cmake --build ./build --target redis_server -- -j 14
+```
+
 Setup python:
 
 ```shell
@@ -21,9 +27,24 @@ For development, the `docker-compose.yml` can be used.
 
 For benchmarking on the VM:
 
+Starting a redis instance:
 ```shell
+sudo apt install redis-server
+sudo cp ./benchmarking/redis_comparison/redis-override.conf /etc/redis/redis.conf
+sudo systemctl start redis-server
+```
 
-````
+Starting a BTree Server instance:
+
+```shell
+build/redi_server/redis_server
+```
+
+Checking both instances:
+```shell
+redis-cli ping
+redis-cli -p 3000 ping
+```
 
 ## Starting a benchmark
 
