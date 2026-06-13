@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import sys
 import time
 import numpy as np
+import datetime
 
 from ycsb2 import BTREE_PORT, REDIS_PORT, YCSB_EXECUTABLE, DATA, run_ycsb, OUT_DIR
 
@@ -11,11 +12,13 @@ MAX = int(sys.argv[3] or 20)
 
 
 def ycsb2c_get():
+    op_count = 1000000
+    op_batch_count = 10000
     dfs: list[pd.DataFrame] = []
     for keyCount in map(lambda n: 2 ** n, range(MIN, MAX)):
         for type in ['btree', 'redis']:
             port = BTREE_PORT if type == 'btree' else REDIS_PORT
-            data = run_ycsb(YCSB_EXECUTABLE, port, DATA, keyCount=keyCount, keyBatchCount=10000, opCount=1000000, opBatchCount=10000)
+            data = run_ycsb(YCSB_EXECUTABLE, port, DATA, keyCount=keyCount, keyBatchCount=10000, opCount=op_count, opBatchCount=op_batch_count)
             data = data[['op', 'duration']]
             data['type'] = type
             data['key_count'] = keyCount
@@ -55,7 +58,7 @@ def ycsb2c_get():
     pivot = long_df.groupby(['key_count', 'source'])['duration'].mean().unstack(fill_value=0)
     pivot = pivot.sort_index()
 
-    out_path = OUT_DIR / 'get_duration_by_key_count.png'
+    out_path = OUT_DIR / f'get_duration_by_key_count_{datetime.datetime.now().isoformat()}.png'
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     fig, ax = plt.subplots(figsize=(12, 6))
@@ -70,7 +73,7 @@ def ycsb2c_get():
 
     ax.set_xlabel('DB size')
     ax.set_ylabel('Duration')
-    ax.set_title('Duration for GET by db size')
+    ax.set_title(f'Duration for {op_count} lookups by db size (batches of {op_batch_count} keys per MGET)')
     ax.set_xticks(x + width * (num_sources - 1) / 2)
     ax.set_xticklabels(labels, rotation=45, ha='right')
     ax.legend(title='source')
