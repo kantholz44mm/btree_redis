@@ -30,4 +30,5 @@ public:
 private:
     void logCommand(const resp_command_context& command) const;
     const api_impl& api;
+    bool commandLogging;
 };

@@ -1,6 +1,7 @@
 #include "resp_api.h"
 
 #include <iostream>
+#include <chrono>
 #include "../resp/resp_command_context.h"
 #include "../resp/resp_connection.h"
 
@@ -9,13 +10,13 @@
 // ReSharper disable CppMemberFunctionMayBeStatic
 
 resp_api::resp_api(const api_impl& api) : api(api) {
+    commandLogging = getenv("REDIS_SERVER_COMMAND_LOGGING") != nullptr;
 }
 
 void resp_api::processCommand(const resp_command_context& command) const {
-#ifdef COMMAND_LOGGING
-    std::cout << "Received command: ";
-    logCommand(command);
-#endif
+    if (commandLogging) {
+        logCommand(command);
+    }
 
     // TODO add a proper command tree data structure for better lookup
 
@@ -287,10 +288,21 @@ void resp_api::onFlushAll(const resp_command_context& command) const {
 }
 
 void resp_api::logCommand(const resp_command_context& command) const {
-    for (const auto& val : command.getCommand()) {
+    auto args = std::span(command.getCommand());
+    size_t truncated = 0;
+    if (args.size() > 5) {
+        args = args.subspan(0,5);
+        truncated = command.getCommand().size() - args.size();
+    }
+    auto now = std::chrono::system_clock::now();
+    std::cout << std::format("{0:%F_%T} Received command: ", now);
+    for (const auto& val : args) {
         if (val.isBulkString()) {
             std::cout << '"' << *val.getAsString() << "\"  ";
         }
+    }
+    if (truncated != 0) {
+        std::cout << "... +" << truncated;
     }
     std::cout << std::endl;
 }
