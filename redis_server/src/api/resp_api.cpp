@@ -2,10 +2,9 @@
 
 #include <iostream>
 #include <chrono>
+#include <format>
 #include "../resp/resp_command_context.h"
 #include "../resp/resp_connection.h"
-
-// #define COMMAND_LOGGING
 
 // ReSharper disable CppMemberFunctionMayBeStatic
 
