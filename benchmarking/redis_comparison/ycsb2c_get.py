@@ -7,16 +7,16 @@ import datetime
 
 from ycsb2 import BTREE_PORT, REDIS_PORT, YCSB_EXECUTABLE, DATA, run_ycsb, OUT_DIR
 
-MIN = int(sys.argv[2] or 10)
-MAX = int(sys.argv[3] or 20)
+MIN = int(sys.argv[3] or 10)
+MAX = int(sys.argv[4] or 20)
 
 
-def ycsb2c_get():
+def ycsb2c_get(dbs: list[str]):
     op_count = 1000000
     op_batch_count = 10000
     dfs: list[pd.DataFrame] = []
     for keyCount in map(lambda n: 2 ** n, range(MIN, MAX)):
-        for type in ['btree', 'redis']:
+        for type in dbs:
             port = BTREE_PORT if type == 'btree' else REDIS_PORT
             data = run_ycsb(YCSB_EXECUTABLE, port, DATA, keyCount=keyCount, keyBatchCount=10000, opCount=op_count, opBatchCount=op_batch_count)
             data = data[['op', 'duration']]
