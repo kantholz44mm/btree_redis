@@ -49,6 +49,6 @@ redis-cli -p 3000 ping
 ## Starting a benchmark
 
 ```shell
-.venv/bin/python3 benchmarking/redis_comparison/main.py YCSB2_GET 10 25
-.venv/bin/python3 benchmarking/redis_comparison/main.py YCSB2_SET 10 25
+.venv/bin/python3 benchmarking/redis_comparison/main.py YCSB2_GET btree,redis 10 25
+.venv/bin/python3 benchmarking/redis_comparison/main.py YCSB2_SET btree,redis 10 25
 ```
