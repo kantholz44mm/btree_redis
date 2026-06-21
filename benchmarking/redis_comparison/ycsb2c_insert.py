@@ -7,18 +7,21 @@ import datetime
 
 from ycsb2 import BTREE_PORT, REDIS_PORT, run_ycsb, YCSB_EXECUTABLE, DATA, OUT_DIR
 
-MIN = int(sys.argv[3] or 10)
-MAX = int(sys.argv[4] or 20)
+MIN = int(sys.argv[3] or 1)
+MAX = int(sys.argv[4] or 50)
 
 def ycsb2c_insert(dbs: list[str]):
     dfs: list[pd.DataFrame] = []
-    for keyCount in map(lambda n: 2 ** n, range(MIN, MAX)):
+    key_batch_count = 10000
+    for batches in range(MIN, MAX):
+        keyCount = batches * key_batch_count
         for type in dbs:
             port = BTREE_PORT if type == 'btree' else REDIS_PORT
-            data = run_ycsb(YCSB_EXECUTABLE, port, DATA, keyCount, 0)
+            data = run_ycsb(YCSB_EXECUTABLE, port, DATA, keyCount=keyCount, keyBatchCount=key_batch_count, opCount=0)
             data = data[['op', 'duration']]
             data['type'] = type
             data['key_count'] = keyCount
+            data['avg_per_key'] = data['duration'] / keyCount
 
             dfs.append(data)
 
@@ -32,6 +35,7 @@ def ycsb2c_insert(dbs: list[str]):
     # The collected `data` DataFrame has columns: ['op', 'duration', 'type', 'key_count']
     # Normalize and prepare for plotting. Rename 'type' -> 'source' to match earlier semantics.
     data['duration'] = pd.to_numeric(data['duration'], errors='coerce')
+    data['avg_per_key'] = pd.to_numeric(data['avg_per_key'], errors='coerce')
     data = data.dropna(subset=['op', 'duration', 'type'])
     data = data.rename(columns={'type': 'source'})
 
@@ -46,33 +50,29 @@ def ycsb2c_insert(dbs: list[str]):
     data['key_count'] = data['key_count'].astype(int)
 
     # Long-format DataFrame with required columns
-    long_df = data[['op', 'source', 'duration', 'key_count']].reset_index(drop=True)
-    print('\nLong-format combined results (op, source, duration, key_count):')
+    long_df = data[['op', 'source', 'avg_per_key', 'key_count']].reset_index(drop=True)
+    print('\nLong-format combined results (op, source, avg_per_key, key_count):')
     print(long_df.head())
 
-    # Compute mean duration per key_count and source
-    pivot = long_df.groupby(['key_count', 'source'])['duration'].mean().unstack(fill_value=0)
+    # Compute mean avg_per_key per key_count and source
+    pivot = long_df.groupby(['key_count', 'source'])['avg_per_key'].mean().unstack(fill_value=0)
     pivot = pivot.sort_index()
 
-    out_path = OUT_DIR / f'insert_duration_by_key_count_{datetime.datetime.now().isoformat().replace(':', '-')}.png'
+    out_path = OUT_DIR / f'insert_avg_per_key_by_key_count_{datetime.datetime.now().isoformat().replace(':', '-')}.png'
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     fig, ax = plt.subplots(figsize=(12, 6))
 
-    labels = list(pivot.index.astype(str))
-    x = np.arange(len(labels))
-    num_sources = len(pivot.columns)
-    width = 0.8 / max(1, num_sources)
-
-    for i, col in enumerate(pivot.columns):
-        ax.bar(x + i * width, pivot[col].values, width, label=str(col))
+    for col in pivot.columns:
+        ax.plot(pivot.index, pivot[col].values, marker='o', label=str(col), linewidth=2, markersize=8)
 
     ax.set_xlabel('Inserted key count')
-    ax.set_ylabel('Duration')
-    ax.set_title('Duration for key_count key insertions')
-    ax.set_xticks(x + width * (num_sources - 1) / 2)
-    ax.set_xticklabels(labels, rotation=45, ha='right')
+    ax.set_ylabel('Avg. duration per key (s)')
+    ax.set_title('Average duration for key_count key insertions')
+    # ax.set_xscale('log')
+    # ax.set_yscale('log')
     ax.legend(title='source')
+    ax.grid(True, which='both', alpha=0.3)
     plt.tight_layout()
 
     plt.savefig(out_path)

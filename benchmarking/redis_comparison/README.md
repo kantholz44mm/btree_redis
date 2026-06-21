@@ -2,6 +2,12 @@
 
 ## Setup
 
+Configure the build with Release mode:
+
+```shell
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+```
+
 Build the YCSB Target:
 
 ```shell
@@ -51,4 +57,12 @@ redis-cli -p 3000 ping
 ```shell
 .venv/bin/python3 benchmarking/redis_comparison/main.py YCSB2_GET btree,redis 10 25
 .venv/bin/python3 benchmarking/redis_comparison/main.py YCSB2_SET btree,redis 10 25
+```
+
+## Profiling
+
+```shell
+perf record -g ./build/redis_server/redis_server
+perf script > out.perf
+../FlameGraph/stackcollapse-perf.pl ./out.perf > "out-$(date +%F_%H-%M-%S).collapsed"
 ```
