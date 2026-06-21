@@ -9,7 +9,7 @@
 
 class api_impl {
 public:
-    explicit api_impl(DataStructureWrapper& btree);
+    explicit api_impl(BTree& btree);
 
     std::shared_ptr<std::string> get(std::string& key) const;
     void set(std::string& key, std::string& val) const;
@@ -25,5 +25,5 @@ public:
     static std::optional<int64_t> parseIntStrict(const char* buf, const char* end);
 
 private:
-    DataStructureWrapper& btree;
+    BTree& btree;
 };

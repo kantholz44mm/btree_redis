@@ -5,12 +5,12 @@
 
 #include "../resp/resp_types.h"
 
-api_impl::api_impl(DataStructureWrapper& btree): btree(btree) {
+api_impl::api_impl(BTree& btree): btree(btree) {
 }
 
 std::shared_ptr<std::string> api_impl::get(std::string& key) const {
     unsigned payloadSize;
-    uint8_t* res = btree.lookup(reinterpret_cast<uint8_t*>(key.data()), key.length(), payloadSize);
+    uint8_t* res = btree.lookupImpl(reinterpret_cast<uint8_t*>(key.data()), key.length(), payloadSize);
     if (res == nullptr) {
         return nullptr;
     }
@@ -18,24 +18,24 @@ std::shared_ptr<std::string> api_impl::get(std::string& key) const {
 }
 
 void api_impl::set(std::string& key, std::string& val) const {
-    btree.remove(reinterpret_cast<uint8_t*>(key.data()), key.length());
-    btree.insert(
+    btree.removeImpl(reinterpret_cast<uint8_t*>(key.data()), key.length());
+    btree.insertImpl(
         reinterpret_cast<uint8_t*>(key.data()), key.length(),
         reinterpret_cast<uint8_t*>(val.data()), val.length()
     );
 }
 
 bool api_impl::del(std::string& key) const {
-    return btree.remove(reinterpret_cast<uint8_t*>(key.data()), key.length());
+    return btree.removeImpl(reinterpret_cast<uint8_t*>(key.data()), key.length());
 }
 
 bool api_impl::exists(std::string& key) const {
-    return btree.lookup(reinterpret_cast<uint8_t*>(key.data()), key.length());
+    return btree.removeImpl(reinterpret_cast<uint8_t*>(key.data()), key.length());
 }
 
 std::optional<int64_t> api_impl::increment(std::string& key, const int64_t amount) const {
     unsigned payloadSize;
-    uint8_t* res = btree.lookup(reinterpret_cast<uint8_t*>(key.data()), key.length(), payloadSize);
+    uint8_t* res = btree.lookupImpl(reinterpret_cast<uint8_t*>(key.data()), key.length(), payloadSize);
     int64_t intVal;
     if (res == nullptr) {
         intVal = 0;
@@ -48,8 +48,8 @@ std::optional<int64_t> api_impl::increment(std::string& key, const int64_t amoun
     intVal += amount;
     // TODO performance can be improved here, allocate global buffer for this, don't use std::string
     auto incrementedVal = std::to_string(intVal);
-    btree.remove(reinterpret_cast<uint8_t*>(key.data()), key.length());
-    btree.insert(
+    btree.removeImpl(reinterpret_cast<uint8_t*>(key.data()), key.length());
+    btree.insertImpl(
         reinterpret_cast<uint8_t*>(key.data()), key.length(),
         reinterpret_cast<uint8_t*>(incrementedVal.data()), incrementedVal.length()
     );
@@ -78,7 +78,7 @@ void api_impl::mset(std::span<const resp_value> kvPairs) const {
 }
 
 void api_impl::flushAll() const {
-    btree.clear();
+    btree.clearImpl();
 }
 
 std::optional<int64_t> api_impl::parseIntStrict(const std::string& str) {
