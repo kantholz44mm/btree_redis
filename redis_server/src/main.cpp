@@ -10,11 +10,14 @@
 
 using boost::asio::ip::tcp;
 
-DataStructureWrapper btree(false);
+BTree btree(false);
 api_impl apiImpl{btree};
 resp_api respApi{apiImpl};
 
 int main() {
+#ifdef CHECK_TREE_OPS
+    std::cerr << "WARNING: CHECK_TREE_OPS is enabled due to NDEBUG not being present. This can impact performance." << std::endl;
+#endif
     boost::asio::io_context io_context;
     int port = 3000;
     tcp::acceptor acceptor(io_context, tcp::endpoint(tcp::v4(), port));
