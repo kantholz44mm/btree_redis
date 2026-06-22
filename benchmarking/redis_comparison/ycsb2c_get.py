@@ -1,31 +1,30 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import sys
-import time
 import numpy as np
 import datetime
 
 from ycsb2 import BTREE_PORT, REDIS_PORT, YCSB_EXECUTABLE, DATA, run_ycsb, OUT_DIR
 
-MIN = int(sys.argv[3] or 10)
-MAX = int(sys.argv[4] or 20)
+MIN = int(sys.argv[3] or 1)
+MAX = int(sys.argv[4] or 100)
 
 
 def ycsb2c_get(dbs: list[str]):
     op_count = 1000000
     op_batch_count = 10000
+    key_batch_count = 10000
     dfs: list[pd.DataFrame] = []
-    for keyCount in map(lambda n: 2 ** n, range(MIN, MAX)):
+    for batchCount in range(MIN, MAX):
+        keyCount = batchCount * key_batch_count
         for type in dbs:
             port = BTREE_PORT if type == 'btree' else REDIS_PORT
-            data = run_ycsb(YCSB_EXECUTABLE, port, DATA, keyCount=keyCount, keyBatchCount=10000, opCount=op_count, opBatchCount=op_batch_count)
+            data = run_ycsb(YCSB_EXECUTABLE, port, DATA, keyCount=keyCount, keyBatchCount=key_batch_count, opCount=op_count, opBatchCount=op_batch_count)
             data = data[['op', 'duration']]
             data['type'] = type
             data['key_count'] = keyCount
 
             dfs.append(data)
-
-            time.sleep(5)
 
     data = pd.concat(dfs)
 
@@ -65,16 +64,14 @@ def ycsb2c_get(dbs: list[str]):
 
     labels = list(pivot.index.astype(str))
     x = np.arange(len(labels))
-    num_sources = len(pivot.columns)
-    width = 0.8 / max(1, num_sources)
 
     for i, col in enumerate(pivot.columns):
-        ax.bar(x + i * width, pivot[col].values, width, label=str(col))
+        ax.plot(x, pivot[col].values, marker='o', label=str(col))
 
-    ax.set_xlabel('DB size')
-    ax.set_ylabel('Duration')
+    ax.set_xlabel('DB size (key count)')
+    ax.set_ylabel('Duration (s)')
     ax.set_title(f'Duration for {op_count} lookups by db size (batches of {op_batch_count} keys per MGET)')
-    ax.set_xticks(x + width * (num_sources - 1) / 2)
+    ax.set_xticks(x)
     ax.set_xticklabels(labels, rotation=45, ha='right')
     ax.legend(title='source')
     plt.tight_layout()
