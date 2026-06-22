@@ -71,8 +71,11 @@ def ycsb2c_get(dbs: list[str]):
     ax.set_xlabel('DB size (key count)')
     ax.set_ylabel('Duration (s)')
     ax.set_title(f'Duration for {op_count} lookups by db size (batches of {op_batch_count} keys per MGET)')
-    ax.set_xticks(x)
-    ax.set_xticklabels(labels, rotation=45, ha='right')
+
+    tick_interval = max(1, len(labels) // 20)
+    tick_indices = np.arange(0, len(labels), tick_interval)
+    ax.set_xticks(tick_indices)
+    ax.set_xticklabels([labels[i] for i in tick_indices], rotation=45, ha='right')
     ax.legend(title='source')
     plt.tight_layout()
 
