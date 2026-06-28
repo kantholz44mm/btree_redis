@@ -30,6 +30,10 @@ python3 -m venv .venv
 ### Starting redis and redis_server (btree implementation)
 
 For development, the `docker-compose.yml` can be used.
+Redis server can be built with
+```shell
+docker build -f redis_server/Dockerfile -t btree-redis-server:latest .
+```
 
 For benchmarking on the VM:
 
