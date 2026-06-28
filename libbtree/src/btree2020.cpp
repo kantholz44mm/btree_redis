@@ -1,4 +1,5 @@
 #include "btree2020.hpp"
+#include "head.hpp"
 #include <cassert>
 #include <cstdlib>
 #include <cstring>
@@ -661,6 +662,44 @@ BTree::BTree(bool isInt) : root((enableHash && !enableHashAdapt) ? HashNode::mak
 BTree::~BTree()
 {
    root->destroy();
+}
+
+size_t BTree::approximateMemoryUsage() const {
+   size_t total = sizeof(*this);
+
+   std::function<void(AnyNode*)> visit = [&](AnyNode* node) {
+      if (!node)
+         return;
+      switch (node->tag()) {
+         case Tag::Inner:
+            total += pageSizeInner;
+            for (unsigned i = 0; i < node->basic()->count; ++i)
+               visit(node->basic()->getChild(i));
+            visit(node->basic()->upper);
+            break;
+         case Tag::Head4:
+            total += pageSizeInner;
+            for (unsigned i = 0; i <= node->head4()->count; ++i)
+               visit(loadUnaligned<AnyNode*>(node->head4()->children() + i));
+            break;
+         case Tag::Head8:
+            total += pageSizeInner;
+            for (unsigned i = 0; i <= node->head8()->count; ++i)
+               visit(loadUnaligned<AnyNode*>(node->head8()->children() + i));
+            break;
+         case Tag::Leaf:
+            total += pageSizeLeaf;
+            break;
+         case Tag::Dense:
+         case Tag::Dense2:
+         case Tag::Hash:
+            total += pageSizeLeaf;
+            break;
+      }
+   };
+
+   visit(root);
+   return total;
 }
 
 // point lookup
