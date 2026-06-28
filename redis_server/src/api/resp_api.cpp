@@ -95,11 +95,14 @@ void resp_api::processCommand(const resp_command_context& command) const {
 
 /** https://redis.io/docs/latest/commands/info/ */
 void resp_api::onInfo(const resp_command_context& command) const {
-    command.respond(resp_value::bulk_string(
-        "# Server\r\n"
-        "redis_version:8.6.2\r\n"
-        "redis_mode:standalone\r\n"
-    ));
+    std::stringstream str;
+    str << "# Server\r\n";
+    str << "redis_version:8.6.2\r\n";
+    str << "redis_mode:standalone\r\n";
+    str << "\r\n";
+    str << "# Memory\r\n";
+    str << "used_memory_dataset:" << api.getMemory() << "\r\n";
+    command.respond(resp_value::bulk_string(str.str()));
 }
 
 /** https://redis.io/docs/latest/commands/ping/ */

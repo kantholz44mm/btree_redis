@@ -19,6 +19,7 @@ public:
     std::vector<std::shared_ptr<std::string>> mget(std::span<const resp_value> keys) const;
     void mset(std::span<const resp_value> kvPairs) const;
     void flushAll() const;
+    size_t getMemory() const;
 
     static std::optional<int64_t> parseIntStrict(const std::string& str);
     static std::optional<int64_t> parseIntStrict(const char* buf, size_t size);

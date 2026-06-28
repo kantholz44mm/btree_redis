@@ -81,6 +81,10 @@ void api_impl::flushAll() const {
     btree.clearImpl();
 }
 
+size_t api_impl::getMemory() const {
+    return btree.approximateMemoryUsage();
+}
+
 std::optional<int64_t> api_impl::parseIntStrict(const std::string& str) {
     return parseIntStrict(str.data(), str.data() + str.length());
 }
