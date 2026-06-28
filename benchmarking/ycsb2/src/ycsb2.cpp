@@ -5,6 +5,7 @@
 #include <random>
 #include <string>
 #include <chrono>
+#include <regex>
 #include "btree2020.hpp"
 #include "PerfTImer.h"
 #include "RedisClient.h"
@@ -497,6 +498,66 @@ void runSortedScan(
     }*/
 }
 
+void runMemory(
+                PerfTimer& timer, RedisClient& client, std::vector<std::string>& data, Options& options) {
+    if (options.keyCount <= data.size() && keySizeAcceptable(options.payloadSize, data)) {
+        if (!options.dryRun)
+            std::random_shuffle(data.begin(), data.end());
+        data.resize(options.keyCount);
+    } else {
+        std::cerr << "UNACCEPTABLE" << std::endl;
+        options.keyCount = 0;
+        options.opCount = 0;
+    }
+
+    client.run("FLUSHALL").orThrow();
+
+#ifdef USE_STRUCTURE_LITS
+    t.impl.bulkInsert(data);
+#endif
+    {
+        timer.setParam("op", "ycsb_memory_init");
+        timer.setParam("mem", "0");
+        PerfTimerBlock b(timer);
+        // insert
+        if (!options.dryRun) {
+            auto msetCommand = std::string("MSET");
+            for (uint64_t keyIndex = 0; keyIndex < options.keyCount; keyIndex += options.keyBatchCount) {
+                auto batch = std::span(data).subspan(keyIndex, std::min(keyIndex + options.keyBatchCount, options.keyCount) - keyIndex);
+                auto args = std::vector<std::reference_wrapper<const std::string>>();
+                args.reserve(batch.size() * 2 + 1);
+                args.emplace_back(msetCommand);
+                for (auto& key : batch) {
+                    args.emplace_back(key);
+                    args.emplace_back(PAYLOAD);
+                }
+                client.run(args).orThrow();
+            }
+        }
+    }
+
+    {
+        timer.setParam("op", "ycsb_memory_measure");
+        PerfTimerBlock b(timer);
+        if (!options.dryRun) {
+            const auto res = client.run("INFO MEMORY");
+            const auto str = res.getString();
+            const std::regex pattern("^used_memory_dataset:(\\d+)$", std::regex_constants::multiline);
+            std::smatch match;
+            if (!std::regex_search(str, match, pattern)) {
+                throw std::runtime_error("Could not find used_memory_dataset");
+            }
+            if (match.size() < 2) {
+                throw std::runtime_error("Not enough groups");
+            }
+            const auto usedMemory = match[1].str();
+            timer.setParam("mem", usedMemory);
+        }
+    }
+
+    data.clear();
+}
+
 unsigned workloadGenCount(unsigned keyCount, unsigned opCount, unsigned ycsbVariant) {
     switch (envu64("YCSB_VARIANT")) {
     case 3:
@@ -524,6 +585,10 @@ unsigned workloadGenCount(unsigned keyCount, unsigned opCount, unsigned ycsbVari
             return keyCount;
         }
     case 6:
+        {
+            return keyCount;
+        }
+    case 1001:
         {
             return keyCount;
         }
@@ -748,10 +813,16 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    switch (envu64("YCSB_VARIANT")) {
+    const auto variant = envu64("YCSB_VARIANT");
+    switch (variant) {
     case 3:
         {
             runYcsbC(timer, client, data, options);
+            break;
+        }
+    case 1001:
+        {
+            runMemory(timer, client, data, options);
             break;
         }
     case 4:
@@ -786,7 +857,7 @@ int main(int argc, char* argv[]) {
         }
     default:
         {
-            std::cerr << "bad ycsb variant" << std::endl;
+            std::cerr << "bad ycsb variant: " << variant << std::endl;
             abort();
         }
     }
