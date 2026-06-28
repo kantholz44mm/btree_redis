@@ -511,10 +511,6 @@ void runMemory(
     }
 
     client.run("FLUSHALL").orThrow();
-
-#ifdef USE_STRUCTURE_LITS
-    t.impl.bulkInsert(data);
-#endif
     {
         timer.setParam("op", "ycsb_memory_init");
         timer.setParam("mem", "0");

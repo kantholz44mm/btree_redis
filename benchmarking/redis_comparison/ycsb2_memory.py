@@ -8,13 +8,13 @@ from ycsb2 import BTREE_PORT, REDIS_PORT, YCSB_EXECUTABLE, DATA, run_ycsb, OUT_D
 
 MIN = int(sys.argv[3] or 1)
 MAX = int(sys.argv[4] or 100)
+STEP = int(sys.argv[5] or 1)
 
 
 def ycsb2_memory(dbs: list[str]):
     key_batch_count = 10000
     dfs: list[pd.DataFrame] = []
-    for batchCount in range(MIN, MAX):
-        keyCount = batchCount * key_batch_count
+    for keyCount in range(MIN, MAX, STEP):
         for type in dbs:
             port = BTREE_PORT if type == 'btree' else REDIS_PORT
             data = run_ycsb(YCSB_EXECUTABLE, port, DATA, keyCount=keyCount, keyBatchCount=key_batch_count, variant = 1001)
@@ -39,7 +39,7 @@ def ycsb2_memory(dbs: list[str]):
     print(f"Prepared data for plotting: {data.shape[0]} rows")
     print(data.head())
 
-    data = data[data['op'] == 'ycsb_c']
+    data = data[data['op'] == 'ycsb_memory_measure']
 
     # Ensure key_count is numeric and present
     data['key_count'] = pd.to_numeric(data['key_count'], errors='coerce')
