@@ -1,7 +1,7 @@
 import ycsb2c_get
 import ycsb2c_insert
 import ycsb2_memory
-import os
+import ycsb2_scan
 import sys
 
 BENCHMARK = sys.argv[1]
@@ -14,3 +14,5 @@ if __name__ == '__main__':
         ycsb2c_insert.ycsb2c_insert(DBS)
     elif BENCHMARK == 'YCSB2_MEMORY':
         ycsb2_memory.ycsb2_memory(DBS)
+    elif BENCHMARK == 'YCSB2_SCAN':
+        ycsb2_scan.ycsb2c_scan(DBS)

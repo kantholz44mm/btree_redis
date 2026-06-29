@@ -32,6 +32,14 @@ struct Options {
     uint64_t maxScanLength;
 };
 
+std::string int_to_key(uint32_t x) {
+    std::string s;
+    s.resize(4);
+    x = __builtin_bswap32(x);
+    memcpy(s.data(), &x, 4);
+    return s;
+}
+
 static const std::string PAYLOAD = "PAYLOAD";
 
 // zipfParameter is assumed to not change between invocations.
@@ -458,44 +466,48 @@ void runSortedScan(
         timer.setParam("op", "sorted_scan_init");
         PerfTimerBlock b(timer);
         // insert
-        if (!options.dryRun)
-            for (uint64_t i = 0; i < options.keyCount; i++) {
-                const auto key = data[i];
-                client.run("SET %s %s", key.c_str(), PAYLOAD.c_str()).orThrow();
+        if (!options.dryRun) {
+            auto msetCommand = std::string("ZADD");
+            auto sortedSetKey = std::string("$ROOT$");
+            auto dummyScore = std::string("0");
+            for (uint64_t keyIndex = 0; keyIndex < options.keyCount; keyIndex += options.keyBatchCount) {
+                auto batch = std::span(data).subspan(keyIndex, std::min(keyIndex + options.keyBatchCount, options.keyCount) - keyIndex);
+                auto args = std::vector<std::reference_wrapper<const std::string>>();
+                args.reserve(batch.size() * 2 + 1);
+                args.emplace_back(msetCommand);
+                args.emplace_back(sortedSetKey);
+                for (auto& key : batch) {
+                    args.emplace_back(dummyScore);
+                    args.emplace_back(key);
+                }
+                client.run(args).orThrow();
             }
+        }
     }
-    uint8_t keyBuffer[BTreeNode::maxKVSize];
     std::minstd_rand generator(std::rand());
-    std::uniform_int_distribution<unsigned> scanLengthDistribution{1, options.maxScanLength};
+    std::uniform_int_distribution<unsigned> scanLengthDistribution{1, static_cast<unsigned>(options.maxScanLength)};
 
-    // TODO range scan not supported
-    /*
-    t.range_lookup(payload, 0, keyBuffer, [&](unsigned keyLen, uint8_t* payload, unsigned loadedPayloadLen) {
-        return true;
-    });
+    client.run("ZRANGE $ROOT$ %s + BYLEX LIMIT 0 %ld", "[", 99999999999999).orThrow();
 
     {
-        e.setParam("op", "sorted_scan");
-        BTreeCppPerfEventBlock b(e, t, opCount);
-        if (!dryRun)
-            for (uint64_t i = 0; i < opCount; i++) {
-                unsigned keyIndex = zipf_next(e, keyCount, zipfParameter, false, false);
-                assert(keyIndex < data.size());
-                unsigned scanLength = scanLengthDistribution(generator);
-
-                unsigned foundIndex = 0;
-                uint8_t* key = (uint8_t*)data[keyIndex].data();
-                unsigned int keyLen = data[keyIndex].size();
-                auto callback = [&](unsigned keyLen, uint8_t* payload, unsigned loadedPayloadLen) {
-                    if (payloadSize != loadedPayloadLen) {
-                        throw;
-                    }
-                    foundIndex += 1;
-                    return foundIndex < scanLength;
-                };
-                t.range_lookup(key, keyLen, keyBuffer, callback);
+        timer.setParam("op", "sorted_scan");
+        PerfTimerBlock b(timer);
+        if (!options.dryRun) {
+            for (int64_t remainingOps = options.opCount; remainingOps > 0; remainingOps -= options.opBatchCount) {
+                const auto batchSize = std::min(remainingOps, static_cast<int64_t>(options.opBatchCount));
+                for (long i = 0; i < batchSize; ++i) {
+                    const unsigned keyIndex = zipf_next(options.keyCount, options.zipfParameter, false, false);
+                    assert(keyIndex < data.size());
+                    const unsigned scanLength = scanLengthDistribution(generator);
+                    const auto key = data[keyIndex];
+                    client.appendRun("ZRANGE $ROOT$ [%s + BYLEX LIMIT 0 %ld", key.c_str(), scanLength);
+                }
+                for (long i = 0; i < batchSize; ++i) {
+                    client.getReply().orThrow();
+                }
             }
-    }*/
+        }
+    }
 }
 
 void runMemory(
@@ -594,14 +606,6 @@ unsigned workloadGenCount(unsigned keyCount, unsigned opCount, unsigned ycsbVari
             abort();
         }
     }
-}
-
-std::string int_to_key(uint32_t x) {
-    std::string s;
-    s.resize(4);
-    x = __builtin_bswap32(x);
-    memcpy(s.data(), &x, 4);
-    return s;
 }
 
 void lits_escape_strings(std::vector<std::string>& data) {

@@ -16,11 +16,9 @@ REDIS_PORT = '6379'
 BTREE_PORT = '3000'
 
 DATA = 'rng4'
-# DATA = PROJECT_ROOT / 'data' / 'wikipedia_titles.txt'
 
-def run_ycsb(executable: str, port: str, data: str, keyCount: int, opCount: int = 0, opBatchCount: int = 200, keyBatchCount = 200, variant = 3) -> pd.DataFrame:
-    env = os.environ.copy()
-    env.update({
+def run_ycsb(executable: str, port: str, data: str, keyCount: int, opCount: int = 0, opBatchCount: int = 200, keyBatchCount = 200, variant = 3, scanLength=100) -> pd.DataFrame:
+    env_vars = {
         'REDIS_HOST': '127.0.0.1',
         'REDIS_PORT': port,
         'DATA': data,
@@ -31,10 +29,12 @@ def run_ycsb(executable: str, port: str, data: str, keyCount: int, opCount: int 
         'OP_BATCH_COUNT': str(opBatchCount),
         'PAYLOAD_SIZE': '10',
         'RUN_ID': str(uuid.uuid4()),
-        'SCAN_LENGTH': '100',
+        'SCAN_LENGTH': str(scanLength),
         'YCSB_VARIANT': str(variant),
         'ZIPF': '-1',
-    })
+    }
+    env = os.environ.copy()
+    env.update(env_vars)
 
     proc = subprocess.Popen(
         executable,
@@ -58,6 +58,8 @@ def run_ycsb(executable: str, port: str, data: str, keyCount: int, opCount: int 
 
     ret = proc.wait()
     if ret != 0:
+        env_str = ";".join(map(lambda var: f"{var[0]}={var[1]}", env_vars.items()))
+        print(f"Process failed. Reproduce with:\nexport {env_str}; {executable}")
         raise subprocess.CalledProcessError(ret, executable)
 
     output_text = ''.join(collected_lines)
