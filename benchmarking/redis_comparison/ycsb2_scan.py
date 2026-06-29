@@ -9,9 +9,9 @@ from ycsb2 import BTREE_PORT, REDIS_PORT, YCSB_EXECUTABLE, DATA, run_ycsb, OUT_D
 MIN = int(sys.argv[3] or 1)
 MAX = int(sys.argv[4] or 100)
 SCAN_LENGTH = int(sys.argv[5] or 100)
+OP_COUT = int(sys.argv[6] or 10000)
 
 def ycsb2c_scan(dbs: list[str]):
-    op_count = 10000
     op_batch_count = 10000
     key_batch_count = 10000
     dfs: list[pd.DataFrame] = []
@@ -19,7 +19,7 @@ def ycsb2c_scan(dbs: list[str]):
         keyCount = batchCount * key_batch_count
         for type in dbs:
             port = BTREE_PORT if type == 'btree' else REDIS_PORT
-            data = run_ycsb(YCSB_EXECUTABLE, port, DATA, keyCount=keyCount, keyBatchCount=key_batch_count, opCount=op_count, opBatchCount=op_batch_count, scanLength=SCAN_LENGTH, variant=501)
+            data = run_ycsb(YCSB_EXECUTABLE, port, DATA, keyCount=keyCount, keyBatchCount=key_batch_count, opCount=OP_COUT, opBatchCount=op_batch_count, scanLength=SCAN_LENGTH, variant=501)
             data = data[['op', 'duration']]
             data['type'] = type
             data['key_count'] = keyCount
@@ -70,7 +70,7 @@ def ycsb2c_scan(dbs: list[str]):
 
     ax.set_xlabel('DB size (key count)')
     ax.set_ylabel('Duration (s)')
-    ax.set_title(f'Duration for {op_count} scans (length {SCAN_LENGTH}) by db size')
+    ax.set_title(f'Duration for {OP_COUT} scans (length {SCAN_LENGTH}) by db size')
 
     tick_interval = max(1, len(labels) // 20)
     tick_indices = np.arange(0, len(labels), tick_interval)
@@ -78,6 +78,9 @@ def ycsb2c_scan(dbs: list[str]):
     ax.set_xticklabels([labels[i] for i in tick_indices], rotation=45, ha='right')
     ax.legend(title='source')
     plt.tight_layout()
+
+    # Ensure the Y-axis starts at 0
+    ax.set_ylim(bottom=0)
 
     plt.savefig(out_path)
     print(f"Saved bar chart to: {out_path}")
