@@ -78,6 +78,38 @@ void api_impl::mset(std::span<const resp_value> kvPairs) const {
     }
 }
 
+int64_t api_impl::zadd(std::span<const resp_value> scorePairs) const {
+    auto iter = scorePairs.begin();
+    static char dummyKey[] = "";
+    while (iter != scorePairs.end()) {
+        auto& score = *iter->getAsString();
+        if (score != "0") return -1;
+        ++iter;
+        if (iter == scorePairs.end()) break;
+        auto& val = *iter->getAsString();
+        btree.removeImpl(reinterpret_cast<uint8_t*>(val.data()), val.size());
+        btree.insertImpl(
+            reinterpret_cast<uint8_t*>(val.data()), val.size(),
+            reinterpret_cast<uint8_t*>(dummyKey), 0
+        );
+        ++iter;
+    }
+    return scorePairs.size() / 2;
+}
+
+std::vector<std::shared_ptr<std::string>> api_impl::zrange(std::string& min, const uint64_t limit) const {
+    if (limit == 0) return {};
+    static uint8_t keyOut[256];
+    std::vector<std::shared_ptr<std::string>> keys;
+    uint64_t count = 0;
+    btree.range_lookupImpl(reinterpret_cast<uint8_t*>(min.data()), min.length(), keyOut, [&](unsigned int keySize, uint8_t* payload, unsigned int payloadSize) {
+        keys.push_back(std::make_shared<std::string>(reinterpret_cast<char*>(keyOut), keySize));
+        count++;
+        return count < limit;
+    });
+    return keys;
+}
+
 void api_impl::flushAll() const {
     btree.clearImpl();
 }

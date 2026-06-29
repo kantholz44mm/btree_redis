@@ -220,6 +220,70 @@ void resp_api::onMSet(const resp_command_context& command) const {
     command.respondOk();
 }
 
+/** https://redis.io/docs/latest/commands/zadd/ */
+void resp_api::onZAdd(const resp_command_context& command) const {
+    const auto key = command.getArgOrNull(1);
+    if (!key) {
+        command.respondErrorWrongArguments();
+        return;
+    }
+    if (*key != "$ROOT$") {
+        command.respond(resp_value::error("For simplicity, only $ROOT$ is allowed for the key to operate on the entire BTree-Implementation. This is all that's needed for this specific benchmarking use-case"));
+        return;
+    }
+    // option flags NX, XX, GT, LT, CH, INCR are skipped here, this is not to spec but unused anyway
+    const auto result = api.zadd(command.getArgs(2));
+    command.respond(resp_value::integer(result));
+}
+
+/** https://redis.io/docs/latest/commands/zrange/ */
+void resp_api::onZRange(const resp_command_context& command) const {
+    const auto key = command.getArgOrNull(1);
+    auto minArg = command.getArgOrNull(2);
+    const auto limitArg = command.getArgOrNull(7);
+    if (!key || !minArg || !limitArg) {
+        command.respondErrorWrongArguments();
+        return;
+    }
+    if (*key != "$ROOT$") {
+        command.respond(resp_value::error("For simplicity, only $ROOT$ is allowed for the key to operate on the entire BTree-Implementation. This is all that's needed for this specific benchmarking use-case"));
+        return;
+    }
+    if (!command.argIs(4, "bylex")) {
+        command.respond(resp_value::error("ZRANGE command is only supported with BYLEX"));
+        return;
+    }
+    if (!command.argIs(3, "+")) {
+        command.respond(resp_value::error("ZRANGE command is only supported with a max of + (infinite)"));
+        return;
+    }
+    if (!command.argIs(5, "limit")) {
+        command.respond(resp_value::error("ZRANGE command requires the LIMIT part"));
+        return;
+    }
+    if (!command.argIs(6, "0")) {
+        command.respond(resp_value::error("ZRANGE command requires the LIMIT part"));
+        return;
+    }
+    auto limit = arg_parsing::parseIntStrict(*limitArg);
+    if (!limit) {
+        command.respondErrorNoInteger();
+        return;
+    }
+    if (minArg->size() < 0 || (*minArg)[0] != '[') {
+        command.respond(resp_value::error("ZRANGE min value must start with ["));
+        return;
+    }
+    auto min = minArg->substr(1);
+    auto result = api.zrange(min, *limit);
+    auto responseArr = std::vector<resp_value>();
+    responseArr.reserve(result.size());
+    std::ranges::transform(result, std::back_inserter(responseArr), [](const std::shared_ptr<std::string>& val) {
+        return resp_value::bulk_string(val);
+    });
+    command.respond(resp_value::array(responseArr));
+}
+
 /** https://redis.io/docs/latest/commands/flushall/ */
 void resp_api::onFlushAll(const resp_command_context& command) const {
     api.flushAll();

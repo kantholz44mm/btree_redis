@@ -24,6 +24,9 @@ public:
     void onMGet(const resp_command_context& command) const;
     void onMSet(const resp_command_context& command) const;
 
+    void onZAdd(const resp_command_context& command) const;
+    void onZRange(const resp_command_context& command) const;
+
     void onFlushAll(const resp_command_context& command) const;
 
 private:
@@ -41,6 +44,9 @@ private:
         {"decrby", &resp_api::onDecrBy},
         {"mget", &resp_api::onMGet},
         {"mset", &resp_api::onMSet},
+
+        {"zadd", &resp_api::onZAdd},
+        {"zrange", &resp_api::onZRange},
 
         {"flushall", &resp_api::onFlushAll},
     };

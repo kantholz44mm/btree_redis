@@ -18,6 +18,8 @@ public:
     std::optional<int64_t> increment(std::string& key, int64_t amount = 1) const;
     std::vector<std::shared_ptr<std::string>> mget(std::span<const resp_value> keys) const;
     void mset(std::span<const resp_value> kvPairs) const;
+    int64_t zadd(std::span<const resp_value> scorePairs) const;
+    std::vector<std::shared_ptr<std::string>> zrange(std::string& min, uint64_t limit) const;
     void flushAll() const;
     size_t getMemory() const;
 
