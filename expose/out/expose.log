@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026/Arch Linux) (preloaded format=pdflatex 2026.6.26)  29 JUN 2026 14:49
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026/Arch Linux) (preloaded format=pdflatex 2026.6.26)  29 JUN 2026 16:52
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -614,21 +614,21 @@ Package rerunfilecheck Info: File `expose.out' has not changed.
 (rerunfilecheck)             Checksum: 93C5E41CE53E64038382807C3D744A13;1158.
  ) 
 Here is how much of TeX's memory you used:
- 16910 strings out of 469462
- 324631 string characters out of 5468614
- 709950 words of memory out of 5000000
- 45393 multiletter control sequences out of 15000+600000
- 734796 words of font info for 156 fonts, out of 8000000 for 9000
+ 16914 strings out of 469462
+ 324686 string characters out of 5468614
+ 710987 words of memory out of 5000000
+ 45395 multiletter control sequences out of 15000+600000
+ 737518 words of font info for 158 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
  75i,8n,80p,376b,1024s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/share/t
 exmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/share/texmf-dist/fonts/type1
 /urw/times/utmr8a.pfb></usr/share/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
 
-Output written on out/expose.pdf (1 page, 94302 bytes).
+Output written on out/expose.pdf (1 page, 94806 bytes).
 PDF statistics:
- 66 PDF objects out of 1000 (max. 8388607)
- 53 compressed objects within 1 object stream
- 10 named destinations out of 1000 (max. 500000)
+ 68 PDF objects out of 1000 (max. 8388607)
+ 55 compressed objects within 1 object stream
+ 11 named destinations out of 1000 (max. 500000)
  54 words of extra memory for PDF output out of 10000 (max. 10000000)
 

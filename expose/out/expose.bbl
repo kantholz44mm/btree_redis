@@ -26,4 +26,10 @@ M.~M{\"u}ller, L.~Benson, and V.~Leis, ``B-trees are back: Engineering fast and
   pageable node layouts,'' \emph{Proceedings of the ACM on Management of Data},
   vol.~3, no.~1, pp. 1--26, 2025.
 
+\bibitem{btree_redis2026}
+J.~Gruhler, M.~Bellm, A.~{Rico Martin}, and M.~Raba, ``btree\_redis:
+  Redis-compatible in-memory key-value store based on optimized
+  {B\textsuperscript{+}}-trees,''
+  \url{https://github.com/kantholz44mm/btree_redis}, 2026.
+
 \end{thebibliography}
