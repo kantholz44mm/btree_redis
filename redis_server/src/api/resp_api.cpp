@@ -3,6 +3,8 @@
 #include <iostream>
 #include <chrono>
 #include <format>
+#include <boost/algorithm/string/case_conv.hpp>
+
 #include "../resp/resp_command_context.h"
 #include "../resp/resp_connection.h"
 
@@ -17,80 +19,19 @@ void resp_api::processCommand(const resp_command_context& command) const {
         logCommand(command);
     }
 
-    // TODO add a proper command tree data structure for better lookup
-
-    if (command.argIs(0, "ping")) {
-        onPing(command);
+    const auto rootCommand = command.getArgOrNull(0);
+    if (!rootCommand) {
+        command.respondErrorWrongArguments();
         return;
     }
-    if (command.argIs(0, "info")) {
-        onInfo(command);
+    const auto& commandEntry = commandMap.find(boost::algorithm::to_lower_copy(*rootCommand));
+    if (commandEntry == commandMap.end()) {
+        std::cout << "Unknown command received: ";
+        command.respond(resp_value::error(std::format("ERR unknown command '{}'", *rootCommand)));
         return;
     }
-
-    if (command.argIs(0, "command")) {
-        if (command.argIs(1, "docs")) {
-            onDocs(command);
-            return;
-        }
-    }
-    if (command.argIs(0, "client")) {
-        if (command.argIs(1, "setname")) {
-            command.respondOk();
-            return;
-        }
-    }
-
-
-    if (command.argIs(0, "get")) {
-        onGet(command);
-        return;
-    }
-    if (command.argIs(0, "set")) {
-        onSet(command);
-        return;
-    }
-    if (command.argIs(0, "del")) {
-        onDel(command);
-        return;
-    }
-    if (command.argIs(0, "exists")) {
-        onExists(command);
-        return;
-    }
-    if (command.argIs(0, "incr")) {
-        onIncr(command);
-        return;
-    }
-    if (command.argIs(0, "incrby")) {
-        onIncrBy(command);
-        return;
-    }
-    if (command.argIs(0, "decr")) {
-        onDecr(command);
-        return;
-    }
-    if (command.argIs(0, "decrby")) {
-        onDecrBy(command);
-        return;
-    }
-    if (command.argIs(0, "mget")) {
-        onMGet(command);
-        return;
-    }
-    if (command.argIs(0, "mset")) {
-        onMSet(command);
-        return;
-    }
-
-    if (command.argIs(0, "flushall")) {
-        onFlushAll(command);
-        return;
-    }
-
-    std::cout << "Unknown command received: ";
-    logCommand(command);
-    command.respond(resp_value::error("ERR unknown command"));
+    const auto& commandFn = commandEntry->second;
+    commandFn(*this, command);
 }
 
 /** https://redis.io/docs/latest/commands/info/ */
@@ -108,11 +49,6 @@ void resp_api::onInfo(const resp_command_context& command) const {
 /** https://redis.io/docs/latest/commands/ping/ */
 void resp_api::onPing(const resp_command_context& command) const {
     command.respond(resp_value::simple_string("PONG"));
-}
-
-/** https://redis.io/docs/latest/commands/command-docs/ */
-void resp_api::onDocs(const resp_command_context& command) const {
-    command.respond(resp_value::array(std::vector<resp_value>{}));
 }
 
 /** https://redis.io/docs/latest/commands/get/ */

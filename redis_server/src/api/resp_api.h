@@ -12,7 +12,6 @@ public:
 
     void onInfo(const resp_command_context& command) const;
     void onPing(const resp_command_context& command) const;
-    void onDocs(const resp_command_context& command) const;
 
     void onGet(const resp_command_context& command) const;
     void onSet(const resp_command_context& command) const;
@@ -28,6 +27,24 @@ public:
     void onFlushAll(const resp_command_context& command) const;
 
 private:
+    const std::unordered_map<std::string, std::function<void(const resp_api& api, const resp_command_context& command)>> commandMap{
+        {"ping", &resp_api::onPing},
+        {"info", &resp_api::onInfo},
+
+        {"get", &resp_api::onGet},
+        {"set", &resp_api::onSet},
+        {"del", &resp_api::onDel},
+        {"exists", &resp_api::onExists},
+        {"incr", &resp_api::onIncr},
+        {"incrby", &resp_api::onIncrBy},
+        {"decr", &resp_api::onDecr},
+        {"decrby", &resp_api::onDecrBy},
+        {"mget", &resp_api::onMGet},
+        {"mset", &resp_api::onMSet},
+
+        {"flushall", &resp_api::onFlushAll},
+    };
+
     void logCommand(const resp_command_context& command) const;
     const api_impl& api;
     bool commandLogging;
