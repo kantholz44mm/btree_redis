@@ -1,0 +1,18 @@
+# Use PDF mode
+$pdf_mode = 1;
+
+# Run pdflatex in nonstop mode
+$pdflatex = 'pdflatex -interaction=nonstopmode -halt-on-error %O %S';
+
+# Directory for aux files
+$out_dir = 'out';
+
+# Directory for intermediate files latexmk generates itself
+$aux_dir = 'out';
+
+# Make sure bibtex is run automatically
+$bibtex_use = 1;
+
+# Clean extra files when running latexmk -c
+$clean_ext = 'acn acr alg glo gls ist';
+
