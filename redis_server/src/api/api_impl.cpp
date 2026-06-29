@@ -3,6 +3,7 @@
 #include <optional>
 #include <algorithm>
 
+#include "arg_parsing.h"
 #include "../resp/resp_types.h"
 
 api_impl::api_impl(BTree& btree): btree(btree) {
@@ -41,7 +42,7 @@ std::optional<int64_t> api_impl::increment(std::string& key, const int64_t amoun
         intVal = 0;
     } else {
         const char* val = reinterpret_cast<char*>(res);
-        const auto optInt = parseIntStrict(val, payloadSize);
+        const auto optInt = arg_parsing::parseIntStrict(val, payloadSize);
         if (!optInt) return {};
         intVal = *optInt;
     }
@@ -83,27 +84,4 @@ void api_impl::flushAll() const {
 
 size_t api_impl::getMemory() const {
     return btree.approximateMemoryUsage();
-}
-
-std::optional<int64_t> api_impl::parseIntStrict(const std::string& str) {
-    return parseIntStrict(str.data(), str.data() + str.length());
-}
-
-std::optional<int64_t> api_impl::parseIntStrict(const char* buf, const size_t size) {
-    return parseIntStrict(buf, buf + size);
-}
-
-std::optional<int64_t> api_impl::parseIntStrict(const char* buf, const char* end) {
-    if (buf == end) return {};
-    int64_t val = 0;
-    for (auto i = buf; i != end; ++i) {
-        if (*i >= '0' && *i <= '9') {
-            val = val * 10 + (*i - '0');
-        } else if (*i == '-' && i == buf) {
-        } else {
-            return {};
-        }
-    }
-    if (buf[0] == '-') val = -val;
-    return {val};
 }

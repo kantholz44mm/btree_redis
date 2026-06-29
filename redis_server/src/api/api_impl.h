@@ -21,10 +21,6 @@ public:
     void flushAll() const;
     size_t getMemory() const;
 
-    static std::optional<int64_t> parseIntStrict(const std::string& str);
-    static std::optional<int64_t> parseIntStrict(const char* buf, size_t size);
-    static std::optional<int64_t> parseIntStrict(const char* buf, const char* end);
-
 private:
     BTree& btree;
 };

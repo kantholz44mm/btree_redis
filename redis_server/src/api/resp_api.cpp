@@ -7,6 +7,7 @@
 
 #include "../resp/resp_command_context.h"
 #include "../resp/resp_connection.h"
+#include "arg_parsing.h"
 
 // ReSharper disable CppMemberFunctionMayBeStatic
 
@@ -147,7 +148,7 @@ void resp_api::onIncrBy(const resp_command_context& command) const {
         command.respondErrorWrongArguments();
         return;
     }
-    const auto amount = api_impl::parseIntStrict(*amountStr);
+    const auto amount = arg_parsing::parseIntStrict(*amountStr);
     if (!amount) {
         command.respondErrorNoInteger();
         return;
@@ -187,7 +188,7 @@ void resp_api::onDecrBy(const resp_command_context& command) const {
         command.respondErrorWrongArguments();
         return;
     }
-    const auto amount = api_impl::parseIntStrict(*amountStr);
+    const auto amount = arg_parsing::parseIntStrict(*amountStr);
     if (!amount) {
         command.respondErrorNoInteger();
         return;
