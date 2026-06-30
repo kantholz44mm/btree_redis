@@ -7,10 +7,10 @@ import datetime
 
 from ycsb2 import BTREE_PORT, REDIS_PORT, run_ycsb, YCSB_EXECUTABLE, DATA, OUT_DIR
 
-MIN = int(sys.argv[3] or 1)
-MAX = int(sys.argv[4] or 50)
-
 def ycsb2c_insert(dbs: list[str]):
+    MIN = int(sys.argv[3] or 1)
+    MAX = int(sys.argv[4] or 50)
+
     dfs: list[pd.DataFrame] = []
     key_batch_count = 10000
     for batches in range(MIN, MAX):

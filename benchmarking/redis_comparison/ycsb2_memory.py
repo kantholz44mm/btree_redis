@@ -6,12 +6,13 @@ import datetime
 
 from ycsb2 import BTREE_PORT, REDIS_PORT, YCSB_EXECUTABLE, DATA, run_ycsb, OUT_DIR
 
-MIN = int(sys.argv[3] or 1)
-MAX = int(sys.argv[4] or 100)
-STEP = int(sys.argv[5] or 1)
 
 
 def ycsb2_memory(dbs: list[str]):
+    MIN = int(sys.argv[3] or 1)
+    MAX = int(sys.argv[4] or 100)
+    STEP = int(sys.argv[5] or 1)
+
     key_batch_count = 10000
     dfs: list[pd.DataFrame] = []
     for keyCount in range(MIN, MAX, STEP):

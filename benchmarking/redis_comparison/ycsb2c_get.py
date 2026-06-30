@@ -6,17 +6,19 @@ import datetime
 
 from ycsb2 import BTREE_PORT, REDIS_PORT, YCSB_EXECUTABLE, DATA, run_ycsb, OUT_DIR
 
-MIN = int(sys.argv[3] or 1)
-MAX = int(sys.argv[4] or 100)
-
 
 def ycsb2c_get(dbs: list[str]):
+    MIN = int(sys.argv[3] or 1)
+    MAX = int(sys.argv[4] or 100)
+    STEP = int(sys.argv[5] or 10)
+
     op_count = 1000000
     op_batch_count = 10000
     key_batch_count = 10000
     dfs: list[pd.DataFrame] = []
-    for batchCount in range(MIN, MAX):
-        keyCount = batchCount * key_batch_count
+    keyCounts = list(range(MIN, MAX+STEP, STEP))
+    for (i, keyCount) in enumerate(keyCounts):
+        print(f"{i}/{len(keyCounts)} - {i/len(keyCounts)*100:.0f}%")
         for type in dbs:
             port = BTREE_PORT if type == 'btree' else REDIS_PORT
             data = run_ycsb(YCSB_EXECUTABLE, port, DATA, keyCount=keyCount, keyBatchCount=key_batch_count, opCount=op_count, opBatchCount=op_batch_count)
@@ -27,8 +29,6 @@ def ycsb2c_get(dbs: list[str]):
             dfs.append(data)
 
     data = pd.concat(dfs)
-
-
 
     print(data)
 
@@ -78,6 +78,8 @@ def ycsb2c_get(dbs: list[str]):
     ax.set_xticklabels([labels[i] for i in tick_indices], rotation=45, ha='right')
     ax.legend(title='source')
     plt.tight_layout()
+
+    ax.set_ylim(bottom=0)
 
     plt.savefig(out_path)
     print(f"Saved bar chart to: {out_path}")

@@ -6,12 +6,12 @@ import datetime
 
 from ycsb2 import BTREE_PORT, REDIS_PORT, YCSB_EXECUTABLE, DATA, run_ycsb, OUT_DIR
 
-MIN = int(sys.argv[3] or 1)
-MAX = int(sys.argv[4] or 100)
-SCAN_LENGTH = int(sys.argv[5] or 100)
-OP_COUT = int(sys.argv[6] or 10000)
-
 def ycsb2c_scan(dbs: list[str]):
+    MIN = int(sys.argv[3] or 1)
+    MAX = int(sys.argv[4] or 100)
+    SCAN_LENGTH = int(sys.argv[5] or 100)
+    OP_COUT = int(sys.argv[6] or 10000)
+
     op_batch_count = 10000
     key_batch_count = 10000
     dfs: list[pd.DataFrame] = []

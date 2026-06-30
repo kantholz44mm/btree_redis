@@ -226,6 +226,25 @@ void runYcsbC(
     }
 
     {
+        timer.setParam("op", "ycsb_c_rehash");
+        PerfTimerBlock b(timer);
+        // retrieve every key once to trigger potential rehashes to not affect actual benchmark
+        if (!options.dryRun) {
+            auto msetCommand = std::string("MGET");
+            for (uint64_t keyIndex = 0; keyIndex < options.keyCount; keyIndex += options.keyBatchCount) {
+                auto batch = std::span(data).subspan(keyIndex, std::min(keyIndex + options.keyBatchCount, options.keyCount) - keyIndex);
+                auto args = std::vector<std::reference_wrapper<const std::string>>();
+                args.reserve(batch.size() + 1);
+                args.emplace_back(msetCommand);
+                for (auto& key : batch) {
+                    args.emplace_back(key);
+                }
+                client.run(args).orThrow();
+            }
+        }
+    }
+
+    {
         timer.setParam("op", "ycsb_c");
         PerfTimerBlock b(timer);
         if (!options.dryRun) {
