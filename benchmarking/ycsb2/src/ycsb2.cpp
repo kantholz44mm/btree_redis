@@ -524,8 +524,11 @@ void runSortedScan(
                 for (long i = 0; i < batchSize; ++i) {
                     auto res = client.getReply().orThrow();
                     std::cout << "Reply got items: =======================================================" << std::endl;
-                    for (auto item : res.getArray()) {
-                        std::cout << item.getString() << std::endl;
+                    for (const auto& item : res.getArray()) {
+                        for (const char c : item.getString()) {
+                            std::cout << std::hex << c << ' ';
+                        }
+                        std::cout << std::dec << std::endl;
                     }
                 }
             }
