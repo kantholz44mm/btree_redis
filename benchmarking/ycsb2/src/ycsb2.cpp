@@ -522,7 +522,11 @@ void runSortedScan(
                     client.appendRun("ZRANGE $ROOT$ [%s + BYLEX LIMIT 0 %ld", key.c_str(), scanLength);
                 }
                 for (long i = 0; i < batchSize; ++i) {
-                    client.getReply().orThrow();
+                    auto res = client.getReply().orThrow();
+                    std::cout << "Reply got items: =======================================================" << std::endl;
+                    for (auto item : res.getArray()) {
+                        std::cout << item.getString() << std::endl;
+                    }
                 }
             }
         }
