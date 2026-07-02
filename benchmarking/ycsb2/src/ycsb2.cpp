@@ -526,7 +526,7 @@ void runSortedScan(
                     std::cout << "Reply got items: =======================================================" << std::endl;
                     for (const auto& item : res.getArray()) {
                         for (const char c : item.getString()) {
-                            std::cout << std::hex << c << ' ';
+                            std::cout << std::hex << static_cast<int>(c) << ' ';
                         }
                         std::cout << std::dec << std::endl;
                     }
