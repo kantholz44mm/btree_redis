@@ -16,7 +16,11 @@ def ycsb2c_scan(dbs: list[str]):
     op_batch_count = 10000
     key_batch_count = 10000
     dfs: list[pd.DataFrame] = []
-    for keyCount in range(MIN, MAX+STEP, STEP):
+
+
+    keyCounts = list(range(MIN, MAX+STEP, STEP))
+    for (i, keyCount) in enumerate(keyCounts):
+        print(f"{i}/{len(keyCounts)} - {i/len(keyCounts)*100:.0f}%")
         for type in dbs:
             port = BTREE_PORT if type == 'btree' else REDIS_PORT
             data = run_ycsb(YCSB_EXECUTABLE, port, DATA, keyCount=keyCount, keyBatchCount=key_batch_count, opCount=OP_COUT, opBatchCount=op_batch_count, scanLength=SCAN_LENGTH, variant=501)
