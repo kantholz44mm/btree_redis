@@ -1,16 +1,17 @@
-import pandas as pd
-import matplotlib.pyplot as plt
-import sys
-import numpy as np
 import datetime
+import sys
 
-from ycsb2 import BTREE_PORT, REDIS_PORT, YCSB_EXECUTABLE, DATA, run_ycsb, OUT_DIR
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+
+from ycsb2 import YCSB_EXECUTABLE, DATA, run_ycsb, OUT_DIR, get_port_for_db
 
 
 def ycsb2c_get(dbs: list[str]):
-    MIN = int(sys.argv[3] or 1)
-    MAX = int(sys.argv[4] or 100)
-    STEP = int(sys.argv[5] or 10)
+    MIN = int(sys.argv[3] or 10000)
+    MAX = int(sys.argv[4] or 1000000)
+    STEP = int(sys.argv[5] or 10000)
 
     op_count = 1000000
     op_batch_count = 10000
@@ -19,11 +20,10 @@ def ycsb2c_get(dbs: list[str]):
     keyCounts = list(range(MIN, MAX+STEP, STEP))
     for (i, keyCount) in enumerate(keyCounts):
         print(f"{i}/{len(keyCounts)} - {i/len(keyCounts)*100:.0f}%")
-        for type in dbs:
-            port = BTREE_PORT if type == 'btree' else REDIS_PORT
-            data = run_ycsb(YCSB_EXECUTABLE, port, DATA, keyCount=keyCount, keyBatchCount=key_batch_count, opCount=op_count, opBatchCount=op_batch_count)
+        for db in dbs:
+            data = run_ycsb(YCSB_EXECUTABLE, get_port_for_db(db), DATA, keyCount=keyCount, keyBatchCount=key_batch_count, opCount=op_count, opBatchCount=op_batch_count)
             data = data[['op', 'duration']]
-            data['type'] = type
+            data['type'] = db
             data['key_count'] = keyCount
 
             dfs.append(data)

@@ -1,26 +1,28 @@
-import pandas as pd
-import matplotlib.pyplot as plt
-import sys
-import numpy as np
 import datetime
+import sys
 
-from ycsb2 import BTREE_PORT, REDIS_PORT, YCSB_EXECUTABLE, DATA, run_ycsb, OUT_DIR
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 
+from benchmarking.redis_comparison.ycsb2 import get_port_for_db
+from ycsb2 import YCSB_EXECUTABLE, DATA, run_ycsb, OUT_DIR
 
 
 def ycsb2_memory(dbs: list[str]):
-    MIN = int(sys.argv[3] or 1)
-    MAX = int(sys.argv[4] or 100)
-    STEP = int(sys.argv[5] or 1)
+    MIN = int(sys.argv[3] or 10000)
+    MAX = int(sys.argv[4] or 1000000)
+    STEP = int(sys.argv[5] or 10000)
 
     key_batch_count = 10000
     dfs: list[pd.DataFrame] = []
-    for keyCount in range(MIN, MAX, STEP):
-        for type in dbs:
-            port = BTREE_PORT if type == 'btree' else REDIS_PORT
-            data = run_ycsb(YCSB_EXECUTABLE, port, DATA, keyCount=keyCount, keyBatchCount=key_batch_count, variant = 1001)
+    keyCounts = list(range(MIN, MAX+STEP, STEP))
+    for (i, keyCount) in enumerate(keyCounts):
+        print(f"{i}/{len(keyCounts)} - {i/len(keyCounts)*100:.0f}%")
+        for db in dbs:
+            data = run_ycsb(YCSB_EXECUTABLE, get_port_for_db(db), DATA, keyCount=keyCount, keyBatchCount=key_batch_count, variant=1001)
             data = data[['op', 'mem']]
-            data['type'] = type
+            data['type'] = db
             data['key_count'] = keyCount
 
             dfs.append(data)

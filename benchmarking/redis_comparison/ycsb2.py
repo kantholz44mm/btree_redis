@@ -12,9 +12,6 @@ OUT_DIR = REDIS_COMPARISON_ROOT / 'out'
 
 YCSB_EXECUTABLE = os.getenv('YCSB_EXECUTABLE', str(PROJECT_ROOT / 'build' / 'benchmarking' / 'ycsb2' / 'ycsb2'))
 
-REDIS_PORT = '6379'
-BTREE_PORT = '3000'
-
 DATA = 'rng4'
 
 def run_ycsb(executable: str, port: str, data: str, keyCount: int, opCount: int = 0, opBatchCount: int = 200, keyBatchCount = 200, variant = 3, scanLength=100) -> pd.DataFrame:
@@ -76,3 +73,14 @@ def run_ycsb(executable: str, port: str, data: str, keyCount: int, opCount: int 
         df['duration'] = pd.to_numeric(df['duration'], errors='coerce')
 
     return df
+
+
+REDIS_PORT = '6379'
+BTREE_PORT = '3000'
+
+def get_port_for_db(db):
+    if db == 'btree':
+        return BTREE_PORT
+    if db == 'redis':
+        return REDIS_PORT
+    raise RuntimeError(f"Unknown db name: {db}")
