@@ -43,6 +43,51 @@ B-Trees, In-Memory Database, Key-Value Store, Memory Layout
 \section{Analysis and Setup of the Existing Repository}
 \section{Reproduction of Benchmark Results}
 \section{Implementation of a Key-Value Store Based on B-Trees}
+
+Based on the B\textsuperscript{+}-tree implementation, a Redis-compatible key-value store was built.
+As the first step, serialization and deserialization of the Redis Serialization Protocol (RESP) was implemented (Version 2).
+RESP uses a text-based encoding and features data types such as strings, integers and arrays.
+These values are sent over a TCP-Connection using Boost.Asio.
+The server parses incoming commands and processes the requests on libbtree accordingly.
+Implemented commands include most basic key-value commands (\texttt{GET}, \texttt{SET}, \texttt{MGET}, \texttt{MSET}, \texttt{DEL}),
+as well as an experimental adaptation of sorted set operations from redis (\texttt{ZADD}, \texttt{ZRANGE}).
+
+To now compare Redis with this custom implementation, the YCSB2 program was adapted to use a Redis client instead of direct B-Tree operations.
+This allows benchmarking against Redis and the B-Tree implementation by running both servers in the local network.
+The insertion and retrieval of keys now uses batched \texttt{MGET} and \texttt{MSET} commands.
+Each command does 10000 operations at once to minimize network overhead.
+The amount of time for a set number of operations is then measured.
+
+\autoref{fig:benchmark-get} shows the throughput of \texttt{MGET} commands with different database sizes.
+Starting at about \num{500000} keys in the database, the system using B-Trees gets competitive.
+At around 2.6 million keys, Redis's performance starts benefitting from the theoretical O(1) performance of hash lookups.
+From here, it stays almost completely flat, while the B-Tree performance is still growing, resembling the expected O(log n) curve.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{img/redis_get_benchmark}
+    \caption{YCSB2 Workload~C: Throughput B-Tree vs.\ Redis by database size.}
+    \label{fig:benchmark-get}
+\end{figure}
+
+A structural advantage of B\textsuperscript{+}-Trees is their ordered key storage.
+This allows range-scans without additional datastructures.
+In a hash-based datastructure, this is not possible.
+This is where Redis uses sorted sets to provide this functionality.
+
+\autoref{fig:benchmark-range-scan} shows the throughput of \texttt{ZRANGE} commands with different database sizes.
+With very small key counts, both perform very similar.
+However, redis has a much steeper increase in duration.
+At around 3 million keys, redis scan take about twice as long.
+The steep gradient of redis flattens at this point and increases very similarly to the B-Tree, but remains behind in performance.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{img/redis_get_benchmark}
+    \caption{Throughput of range scans for B-Tree vs.\ Redis by database size.}
+    \label{fig:benchmark-range-scan}
+\end{figure}
+
 \section{Conclusion}
 
 \nocite{*}
