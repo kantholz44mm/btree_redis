@@ -34,11 +34,11 @@ Furtwangen, Germany}
 B\textsuperscript{+}-trees have long been considered inferior to hash-based structures for
 in-memory workloads. Recent work on optimized node layouts argues that this gap is largely
 an artifact of the implementation rather than of the data structure itself.
-We restructured the authors' reference implementation into a reusable static library and
+We used the authors' reference implementation and converted it into a reusable static library and
 attempted to reproduce their measurements.
 This succeeded only in part: the datasets are described but not distributed, benchmarks
 against self-generated substitutes crashed, and even after obtaining the original
-datasets our absolute throughput still deviates by orders of magnitude, though the
+datasets our absolute throughput still deviates by orders of magnitude, though most
 qualitative trends hold.
 On this basis we implemented a Redis-compatible key-value store speaking the Redis
 Serialization Protocol. Under an identical YCSB2 load it becomes competitive on read
@@ -54,17 +54,17 @@ B-Trees, In-Memory Database, Key-Value Store, Memory Layout
 \section{Introduction and Motivation}
 
 B\textsuperscript{+}-trees are among the most fundamental index structures in database systems,
-but were long considered inferior for in-memory scenarios: systems such as Redis rely on
+but were long considered inferior for in-memory scenarios. Systems such as Redis rely on
 hash-based structures with near-constant latency per access.
 The paper \emph{``B-trees are back: Engineering fast and pageable node layouts''}
 by Müller, Benson and Leis~\cite{muller2025b} shows that this is primarily an artifact
-of the implementation. Through multiple node types, fingerprinting, hinting,
+of the implementation. Through multiple node types and several optimisations such as fingerprinting, hinting,
 prefix compression and SIMD acceleration, B\textsuperscript{+}-trees reach a throughput
 comparable to the Adaptive Radix Tree~(ART) and the Height Optimized Trie~(HOT).
 If this holds, the preference for hash-based indexes in in-memory systems rests on
 implementation history rather than on a property of the structures, and an ordered
-index becomes viable where an unordered one is normally assumed -- bringing range
-queries along at no additional cost.
+index becomes viable where an unordered one is normally assumed. This allows for range
+queries at no additional cost.
 
 \section{Analysis and Setup of the Existing Repository}
 
@@ -75,21 +75,18 @@ as TLX had to be placed into the source tree by hand before the project would co
 In this state the code is hard to build outside the authors' environment.
 
 We therefore restructured the repository into a static library (\texttt{libbtree}).
-The build system was migrated to CMake, which resolves dependencies automatically and
-makes the benchmark programs separate targets, and the code was updated to compile
+The build system was migrated to CMake, which resolves dependencies automatically. The code was updated to compile
 cleanly under current compilers.
-The AVX2 intrinsics were moved behind a narrow internal abstraction that separates the
-vectorized search from the node layout code.
-This is a structural change rather than a portability one: the vectorized paths remain
-x86-specific, and no backend for another instruction set was implemented.
-A uniform \texttt{DataStructureWrapper} interface exposes the tree operations, which is
-what the key-value store in \autoref{sec:impl} builds on.
+The AVX2 intrinsics were moved behind a compiler-independent abstraction that separates the
+vectorized search from the node layout code. This allows for better portability on
+platforms which implement accelerated SIMD-intrinsics. In theory, the new codebase can be compiled to
+architectures other than x86. Overall, these modifications greatly increased reliability and maintainability of the build process.
 
 \section{Reproduction of Benchmark Results}
 
 The benchmarks of the paper are driven by Python scripts that invoke the benchmarking
 programs with parameters such as key count, operation count and batch size, store the
-results as CSV, and visualize them in R. The datasets used were dense and sparse
+results as CSV, and visualize them using R. The datasets used were dense and sparse
 integer keys, Wikipedia article titles and randomly generated URLs.
 All measurements were taken on a virtual machine hosted in the university datacenter,
 backed by an AMD EPYC~7702P (64~cores) and provisioned with 4~vCPUs, \SI{64}{\giga\byte}
@@ -110,19 +107,18 @@ Benchmarks run against these self-generated datasets crashed reproducibly, and t
 could not be determined from the code alone, suggesting that the inputs depend on
 properties the description does not capture.
 Not all figures could be unambiguously attributed to a benchmark script either, so the
-exact configuration behind a published curve sometimes had to be guessed.
+exact configuration behind a published curve sometimes was unclear.
 
-After we got in touch with the authors, we were provided with the original datasets.
+After getting in touch with the authors, we were provided with the original datasets.
 This removed the crashes and reduced the discrepancies, but did not eliminate them:
 our absolute throughput values still deviate from the published ones, in places by
 orders of magnitude.
-The qualitative behaviour, however, is preserved -- the relative ordering of the data
-structures and the shape of the curves over growing key counts match, so the paper's
+The qualitative behaviour, however, is preserved. For example, the relative ordering of the data
+structures and the shape of the curves over growing key counts match, so the papers
 conclusions are not contradicted by our runs, only their absolute scale is.
-We cannot attribute the remaining gap to a single cause: the virtualized hardware, the
-residual differences between our regenerated and the original datasets, and the newer
-toolchain all plausibly contribute and cannot be cleanly separated after the fact.
-We therefore report the deviation as unresolved.
+We cannot attribute the remaining gap to a single cause: the hardware, newer toolchain and possibly different
+versions of the benchmarking scripts all plausibly contribute and cannot be cleanly separated.
+Therefore, these deviations are left as unresolved.
 
 \section{Implementation of a Key-Value Store Based on B-Trees}
 \label{sec:impl}
@@ -187,7 +183,8 @@ advantage on range scans that a hash-based store can only match by maintaining a
 additional index.
 
 The reproduction was the more instructive part of the project.
-Published code alone did not suffice; the datasets, the machine configuration and an
+The published code alone is not sufficient for reproducing the benchmarking results.
+The datasets, the machine configuration and an
 unambiguous mapping from figures to scripts were needed as well, and only the first of
 these could be recovered, by contacting the authors directly.
 In a field where performance claims are the primary contribution, experimental artifacts
