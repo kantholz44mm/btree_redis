@@ -1,5 +1,11 @@
-# General information & Hardware specs
+# Original Paper - General information
+This folder contains everything related to replicating the results from the [original paper](https://github.com/m-mueller678/btree-cpp/tree/sigmod25).
+
 All benchmarks were conducted on a virtual machine (VM). Therefore, the results may be affected by virtualization overhead, shared host resources, and variations in CPU and I/O performance.
+
+Please note that any graphs generated during this project have been stored on the subfolders of `./original_paper_benchmark/R/*` as `graphs.tar.gz`, with each subfolder having zero (if no graphs were or couldn't be created) to one of these compressed files.
+
+# Hardware specs
 
 | Component | Specification |
 |---|---|
@@ -62,7 +68,7 @@ make ycsb-all
 ```
 
 ## 3. Set additional commands & environmental variables
-- Before running any benchmarks, please execute the following commands from the **`./R`** folder to avoid errors
+Before running any benchmarks, please execute the following commands **from the **`./R`** folder** to avoid errors
 ```sh
 export LD_LIBRARY_PATH=$PWD:$LD_LIBRARY_PATH
 sudo sysctl -w kernel.perf_event_paranoid=0
@@ -88,6 +94,8 @@ While running *any* benchmark, the following files are created and continously w
 - <u>joblog-\<benchmarkName\></u>: This file contains additional information related to the benchmark, including the command being run, when the command was run (in UNIX time), and the runtime of each command. Name Example: `joblog-re-eval`
 
 - <u>\<benchmarkName>.csv</u>: benchmark output containing all the necessary data for the R script to create a visualization.
+
+Please note that any errors occurring during the benchmark will **not** be described on any of these files, but on the terminal instead.
 
 ## 6. Compress the produced csv files in csv.gz files
 R-Script makes use of csv.gz files to generate the visualization
@@ -121,7 +129,7 @@ env: ‘named-build/inner-n3-ycsb’: No such file or directory
 env: ‘named-build/prefix-n3-ycsb’: No such file or directory
 env: ‘named-build/tlx-n3-ycsb’: No such file or directory
 ```
-**Solution**: build the project using `make all`
+**Solution**: build the project using `make all`.
 
 ---
 
@@ -139,13 +147,13 @@ env: ‘page-size-builds/_DPS_I_4096__DPS_L_8192/hints-n3-ycsb’: No such file 
 env: ‘page-size-builds/_DPS_I_512__DPS_L_4096/prefix-n3-ycsb’: No such file or directory
 env: ‘page-size-builds/_DPS_I_8192__DPS_L_4096/dense3-n3-ycsb’: No such file or directory
 ```
-**Solution**: execute the shell script `./build_all_var_page_size.sh` to build the project multiple times with different node sizes
+**Solution**: execute the shell script `./build_all_var_page_size.sh` to build the project multiple times with different node sizes.
 
 ---
 
-**Problem**: "Error opening counter cycle"
+**Problem**: "Error opening counter cycle".
 
-**Solution**: Give full access to hardware counters by running the command `sudo sysctl -w kernel.perf_event_paranoid=0`
+**Solution**: Give full access to hardware counters by running the command `sudo sysctl -w kernel.perf_event_paranoid=0`.
 
 ---
 
@@ -157,7 +165,7 @@ named-build/dense3-n3-ycsb: error while loading shared libraries: libwh.so: cann
 named-build/dense1-n3-ycsb: error while loading shared libraries: libwh.so: cannot open shared object file: No such file or directory
 ```
 
-**Solution**: `export LD_LIBRARY_PATH=$PWD:$LD_LIBRARY_PATH`
+**Solution**: run the command `export LD_LIBRARY_PATH=$PWD:$LD_LIBRARY_PATH` inside the `./R` folder
 
 # Miscallaneous
 
@@ -181,15 +189,15 @@ named-build/dense1-n3-ycsb: error while loading shared libraries: libwh.so: cann
 | `R/in-memory-skew/skew3.py` | 1 day 10:36:02 | |
 | `R/space-0-payload/space-0-payload.py` | 01:09:46 | |
 | `R/eval-dense/task-sorted-insert.py` | 01:27:01 | |
-| `R/size3/vary1.py` | 09:21:44 | Possibly useless, v7 |
-| `R/size3/vary2.py` | 07:13:06 | |
-| `R/size3/vary3.py` | 02:04:30 | |
-| `R/size3/vary4.py` | 01:35:25 | |
-| `R/size3/vary5.py` | 04:41:44 | |
-| `R/size3/vary6.py` | 00:00:10 | |
+| `R/size3/vary1.py` | 09:21:44 | Possibly useless, not used by any R scripts |
+| `R/size3/vary2.py` | 07:13:06 | Possibly useless, not used by any R scripts |
+| `R/size3/vary3.py` | 02:04:30 | Possibly useless, not used by any R scripts |
+| `R/size3/vary4.py` | 01:35:25 | Possibly useless, not used by any R scripts |
+| `R/size3/vary5.py` | 04:41:44 | Possibly useless, not used by any R scripts |
+| `R/size3/vary6.py` | 00:00:10 | Possibly useless, not used by any R scripts |
 | `R/size3/vary7.py` | 01:32:42 | |
-| `R/eval-dense/var-density.py` | |
-| `R/eval-dense/var-density-e.py` | |
+| `R/eval-dense/var-density.py` | unknown |
+| `R/eval-dense/var-density-e.py` | unknown |
 
 ## Matplotlib Comparison Plots
 

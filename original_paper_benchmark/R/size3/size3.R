@@ -3,7 +3,7 @@ source("../common.R")
 
 # r <- read_broken_csv('vary1.csv.gz')
 r <- bind_rows(
-  read_broken_csv('v7.csv.gz')
+  read_broken_csv('vary7.csv.gz')
 )
 
 d <- r|>
