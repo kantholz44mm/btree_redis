@@ -1,6 +1,7 @@
 source('../common.R')
 
-r<-read_broken_csv('space-0-payload.csv')
+# originally space-0-payload.csv
+r<-read_broken_csv('space-0-payload.csv.gz')
 
 
 d <- r |>augment()
@@ -12,24 +13,36 @@ d|>ggplot()+
   geom_bar(aes(x=data_name,y=node_count*4096/data_size,fill=config_name),stat='summary',fun=mean,position='dodge')+
   scale_fill_brewer(palette = 'Dark2')
 
+plot_data <- config_pivot |>
+  filter(op == 'ycsb_c') |>
+  mutate(
+    val = 1 - node_count_prefix / node_count_baseline,
+    val = ifelse(!is.finite(val), 0, val)  # force valid y values
+  )
 
-config_pivot|>
-  filter(op == 'ycsb_c')|>
-  ggplot() +
+# Optional: see which rows were problematic originally
+# plot_data |> filter(!is.finite(1 - node_count_prefix / node_count_baseline))
+
+ggplot(plot_data) +
   theme_bw() +
-  geom_col(aes(x = data_name, y = 1 - node_count_prefix / node_count_baseline, fill = data_name)) +
+  geom_col(aes(x = data_name, y = val, fill = data_name)) +
   scale_fill_brewer(palette = 'Dark2', labels = DATA_LABELS, name = 'key set') +
   guides(fill = 'none') +
-  scale_y_continuous(labels = label_percent(), expand = expansion(mult = c(0, .1)),) +
-  scale_x_discrete(limits = {
-    l <- rev(levels(config_pivot$data_name))
-    l[l %in% unique((config_pivot|>filter(!is.na(txs_prefix)))$data_name)]
-  },labels = DATA_LABELS) +
+  scale_y_continuous(
+    labels = label_percent(),
+    expand = expansion(mult = c(0, .1)),
+    limits = c(NA, NA)
+  ) +
+  scale_x_discrete(
+    limits = rev(unique(plot_data$data_name)),  # <- only use names that actually appear
+    labels = DATA_LABELS,
+    drop = FALSE
+  ) +
   labs(x = 'key set', y = NULL) +
   coord_flip() +
   theme(
     plot.margin = margin(0, 0, 0, 0),
-    axis.title.y = element_text(size = 8),
+    axis.title.y = element_text(size = 8)
   )
 save_as('prefix-space', 15)
 

@@ -2,9 +2,30 @@ source('../common.R')
 
 COL_NAMES = c('tag','config_name','data_name','before','after','diff')
 
+read_mem_size <- function(path) {
+  lines <- readLines(gzfile(path), warn = FALSE)
+  lines <- lines[startsWith(lines, '__mem_size')]
+  if (!length(lines)) {
+    return(tibble(
+      tag = character(),
+      config_name = character(),
+      data_name = character(),
+      before = numeric(),
+      after = numeric(),
+      diff = numeric()
+    ))
+  }
+  as_tibble(read.csv(
+    text = paste(lines, collapse = '\n'),
+    header = FALSE,
+    col.names = COL_NAMES,
+    strip.white = TRUE
+  ))
+}
+
 r<-bind_rows(
-  read_csv("in-mem-size.csv.gz",col_names=COL_NAMES)|>filter(config_name!='lits'),
-  read_csv("lits.csv.gz",col_names=COL_NAMES)
+  read_mem_size("in-mem-size.csv.gz")|>filter(config_name!='lits'),
+  read_mem_size("in-mem-size-lits.csv.gz")
 )
 
 colors <- c(

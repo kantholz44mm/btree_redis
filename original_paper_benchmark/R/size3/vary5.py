@@ -5,7 +5,7 @@ def print_work(data, config, id, ycsb, psl, psi, sl=100, op=int(1e7), pl=8):
 
 
 for vary_inner in [False, True]:
-    for run_id in range(5):
+    for run_id in range(1):
         for workload in [3, 5]:
             for d in [['int', 4411764], ['rng4', 4411764], ['data/urls-short', 2377103], ['data/wiki', 3466004]]:
                 for var_size_b in range(8, 16):

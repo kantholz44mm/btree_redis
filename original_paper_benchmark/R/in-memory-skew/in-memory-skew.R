@@ -1,9 +1,13 @@
 source('../common.R')
 
-r <- bind_rows(
-  read_broken_csv('skew3b.csv.gz'),
-  read_broken_csv('lits.csv.gz'),
-)
+input_files <- c('skew3.csv.gz', 'lits.csv.gz')
+input_files <- input_files[file.exists(input_files)]
+
+if (!length(input_files)) {
+  stop('No input CSVs found. Expected skew3.csv.gz and optionally lits.csv.gz.')
+}
+
+r <- bind_rows(lapply(input_files, read_broken_csv))
 
 d<-r|>
   augment()|>
@@ -31,11 +35,9 @@ labels <- data|>
   )|>
   ungroup()|>
   arrange(data_name,start)|>
+  group_by(data_name)|>
   mutate(
-    above = c(FALSE,FALSE,TRUE,TRUE,TRUE,
-              FALSE,FALSE,FALSE,TRUE,TRUE,
-              FALSE,FALSE,FALSE,TRUE,TRUE,
-              FALSE,FALSE,TRUE,TRUE,TRUE),
+    above = row_number() > n() %/% 2,
     data_name,
     #above = !(config_name=='tlx' | data_name %in% c('ints','sparse') & config_name=='hot'),
     y = ifelse(above , max, min),
@@ -91,5 +93,3 @@ data|>
   ) +
   labs(y = 'Normalized lookup/s (log)')
 save_as('zipf-in-mem', 35)
-
-

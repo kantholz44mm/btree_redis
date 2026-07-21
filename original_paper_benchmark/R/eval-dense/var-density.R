@@ -8,8 +8,10 @@ r_var_density <- bind_rows(
   # python3 R/eval-dense/var-density-e.py |parallel -j1 --joblog joblog -- {1}| tee -a R/eval-dense/var-density-e.csv
   #read_broken_csv('var-density-e.csv.gz'),
 
-  #christmas run
-  read_broken_csv('var-density-new-op.csv.gz')
+  # originally var-density-new-op.csv.gz
+  read_broken_csv('var-density.csv.gz'),
+  # originally var-density-new-op.csv.gz
+  read_broken_csv('var-density-e.csv.gz')
 )
 
 d_var_density <- r_var_density|>filter(run_id<5)|>augment()

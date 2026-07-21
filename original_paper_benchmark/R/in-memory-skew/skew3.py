@@ -1,4 +1,4 @@
-for run_id in range(5):
+for run_id in range(1):
     for config in ["baseline","adapt2","art", "hot", "tlx","wh"]:
         for d in [['int',25_000_000],['rng4',25_000_000],['data/urls-short',3766956],['data/wiki',13816679]]:
             for zipf in range(50,151,2):

@@ -6,7 +6,7 @@ def print_work(data, config, id, ycsb, psl, psi, sl=50, op=int(5e6), pl=8):
         f'env LD_LIBRARY_PATH=. DATA={data[0]} KEY_COUNT={data[1]} YCSB_VARIANT={ycsb} SCAN_LENGTH={sl} RUN_ID={id} OP_COUNT={op} PAYLOAD_SIZE={pl} ZIPF=0.99 DENSITY=1 {path}')
 
 for vary_inner in [False, True]:
-    for run_id in range(5):
+    for run_id in range(1):
         for pl in [1,8,16,32,64]:
             for d in ['int', 'rng4', 'data/urls-short', 'data/wiki']:
                 key_count = int(3e8/(avg_key_size[d] + pl))

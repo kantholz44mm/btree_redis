@@ -7,8 +7,12 @@ r <- bind_rows(
   #read_broken_csv('sorted.csv'),
   # python3 R/eval-dense/partition-id-hint.py |parallel -j1 --joblog joblog -- {1} > R/eval-dense/partition-id-hint.csv
   #read_broken_csv('partition-id-hint.csv'),
-  #christmas run
-  read_broken_csv('dense-tasks-op2.csv.gz')
+  # originally dense-tasks-op2.csv.gz
+  read_broken_csv('dense-tasks.csv.gz'),
+  # originally sorted.csv
+  read_broken_csv('task-sorted-insert.csv.gz'),
+  # originally partition-id-hint.csv
+  read_broken_csv('partition-id-hint.csv.gz')
 )
 
 r|>group_by(config_name,data_name,op)|>count()|>arrange(n)|>filter(n!=ifelse(data_name=='int',50,10))
@@ -229,4 +233,3 @@ config_pivot|>
   scale_x_log10(limits = c(100,1e5),breaks = c((1:9)*100,1e3,3e3,1e4))
 
 config_pivot|>filter(data_name == 'partitioned_id')|>mutate(x=data_size/ycsb_range_len,y=txs_dense3/txs_hints,.keep='none')|>slice_max(y)
-

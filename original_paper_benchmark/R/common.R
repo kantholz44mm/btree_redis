@@ -9,7 +9,31 @@ library(patchwork)
 library(forcats)
 library(readr)
 library(RColorBrewer)
-library(ggpattern)
+
+if (requireNamespace("ggpattern", quietly = TRUE)) {
+  library(ggpattern)
+}
+
+resolve_data_file <- function(path) {
+  candidates <- path
+
+  if (endsWith(path, ".csv.gz")) {
+    candidates <- c(candidates, sub("\\.gz$", "", path))
+  } else if (endsWith(path, ".csv")) {
+    candidates <- c(candidates, paste0(path, ".gz"))
+  }
+
+  existing <- candidates[file.exists(candidates)]
+  if (length(existing)) {
+    return(existing[[1]])
+  }
+
+  stop("CSV input not found: ", path, call. = FALSE)
+}
+
+read_csv <- function(file, ...) {
+  readr::read_csv(resolve_data_file(file), ...)
+}
 
 output_dir <- Sys.getenv("R_PLOT_DIR", unset = "out")
 dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
@@ -171,6 +195,7 @@ label_page_size <- function(x) {
 }
 
 read_broken_csv <- function(path) {
+  path <- resolve_data_file(path)
   data <- read.csv(path, strip.white = TRUE)
   data <- data[data[[1]] != colnames(data)[1],]
   tibble(data.frame(lapply(data, type.convert, as.is = TRUE)))
@@ -180,10 +205,21 @@ save_as <- function(name, h, w = 85) {
   svg_path <- file.path(output_dir, paste0(name, '.svg'))
   png_path <- file.path(output_dir, paste0(name, '.png'))
 
-  ggsave(filename = svg_path, device = 'svg', width = w, units = 'mm', height = h)
-  ggsave(filename = png_path, device = 'png', width = w, units = 'mm', height = h, dpi = 150)
-
-  message("Saved plots: ", svg_path, " and ", png_path)
+  if (requireNamespace("svglite", quietly = TRUE)) {
+    tryCatch(
+      ggsave(filename = svg_path, device = 'svg', width = w, units = 'mm', height = h),
+      error = function(e) message("Skipping SVG output after render error: ", svg_path, " (", conditionMessage(e), ")")
+    )
+  } else {
+    message("Skipping SVG output because svglite is not installed: ", svg_path)
+  }
+  tryCatch(
+    {
+      ggsave(filename = png_path, device = 'png', width = w, units = 'mm', height = h, dpi = 150)
+      message("Saved plot: ", png_path)
+    },
+    error = function(e) message("Skipping PNG output after render error: ", png_path, " (", conditionMessage(e), ")")
+  )
   invisible(ggplot2::last_plot())
 }
 
@@ -191,9 +227,13 @@ save_plot_obj <- function(name, plot, h, w = 85, units = 'mm', dpi = 150) {
   svg_path <- file.path(output_dir, paste0(name, '.svg'))
   png_path <- file.path(output_dir, paste0(name, '.png'))
 
-  ggsave(filename = svg_path, plot = plot, device = 'svg', width = w, units = units, height = h)
+  if (requireNamespace("svglite", quietly = TRUE)) {
+    ggsave(filename = svg_path, plot = plot, device = 'svg', width = w, units = units, height = h)
+  } else {
+    message("Skipping SVG output because svglite is not installed: ", svg_path)
+  }
   ggsave(filename = png_path, plot = plot, device = 'png', width = w, units = units, height = h, dpi = dpi)
 
-  message("Saved plots: ", svg_path, " and ", png_path)
+  message("Saved plot: ", png_path)
   invisible(plot)
 }

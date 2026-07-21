@@ -4,7 +4,7 @@ def print_work(data, config, id, ycsb, psl, psi, sl=100, op=int(1e7), pl=8):
         f'env DATA={data[0]} KEY_COUNT={data[1]} YCSB_VARIANT={ycsb} SCAN_LENGTH={sl} RUN_ID={id} OP_COUNT={op} PAYLOAD_SIZE={pl} ZIPF=0.99 DENSITY=1 {path}')
 
 
-for run_id in range(5):
+for run_id in range(1):
     for workload in [3, 5]:
         for d in [['int', 4411764], ['rng4', 4411764], ['data/urls-short', 2377103], ['data/wiki', 3466004]]:
             for var_size_b in range(8, 16):

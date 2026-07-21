@@ -168,9 +168,9 @@ save_as('node-size', 50)
       geom_line(aes(psv, dense_ratio, col = payload_size, shape = payload_size), linewidth = 0.6) +
       scale_y_continuous(name = 'Share of Dense Leaves (%)', labels = label_percent(suffix = ''), breaks = (0:100) * 0.2, expansion(c(0, 0)), position = 'right') +
       scale_x_continuous(breaks = (0:100) * 2, name = "Node Size (KiB)", labels = function(x) 2^(x - 10)) +
-      scale_alpha_manual(name = 'Payload Size', values = c(0, 1, 1), labels = OP_LABELS) +
-      scale_shape_manual(name = 'Payload Size', values = c(1, 1, 4), labels = OP_LABELS) +
-      scale_color_brewer(name = 'Payload Size', palette = 'YlOrRd', labels = OP_LABELS) +
+      scale_alpha_manual(name = 'Payload Size', values = c('8' = 1, '16' = 1, '32' = 1, '64' = 1), labels = function(x) paste0(x, ' B')) +
+      scale_shape_manual(name = 'Payload Size', values = c('8' = 1, '16' = 2, '32' = 4, '64' = 0), labels = function(x) paste0(x, ' B')) +
+      scale_color_brewer(name = 'Payload Size', palette = 'YlOrRd', labels = function(x) paste0(x, ' B')) +
       coord_cartesian(ylim = c(0, 1)) +
       theme(
         strip.text = element_text(size = 8, margin = margin(2, 1, 2, 1)),

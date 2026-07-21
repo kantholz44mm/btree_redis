@@ -1,4 +1,4 @@
-for run_id in range(100):
+for run_id in range(1):
     for pl in [8,32, 256]:
         for d in [['int', 25_000_000], ['rng4', 25_000_000], ['data/urls-short', 3766956], ['data/wiki', 13816679]]:
             for bin in ['hints', 'hints-over-align']:

@@ -27,16 +27,15 @@ r <- bind_rows(
   #read_broken_csv('adapt2-fed65b81398dc6b.csv.gz')
 
   #christmas run
-  read_broken_csv('re-eval.csv.gz'),
+  # originally re-eval.csv.gz
+  read_broken_csv('re-eval-rng8.csv.gz'),
 
   #dense
   read_broken_csv('re-eval-dense.csv.gz')|>filter(config_name != 'dense1'),
 
   # wormhole
-  read_broken_csv('eval-wh.csv.gz'),
-  #lits
-  read_broken_csv('lits-train5.csv.gz')|>mutate(config_name='lits2'),
-  read_broken_csv('lits-inline.csv.gz'),
+  # originally eval-wh.csv.gz
+  read_broken_csv('eval-wormhole.csv.gz'),
 )
 
 COMMON_OPS <- c("ycsb_c", "insert90", "scan")
@@ -68,6 +67,15 @@ config_pivot <- d|>
     best_space_saving = 1 - node_count_best / node_count_baseline,
   )
 
+for (metric in OUTPUT_COLS) {
+  for (config in CONFIG_NAMES) {
+    col <- paste0(metric, "_", config)
+    if (!col %in% colnames(config_pivot)) {
+      config_pivot[[col]] <- NA_real_
+    }
+  }
+}
+
 perf_common <- function(x = config_pivot, geom)
   x|>
     ggplot() +
@@ -97,6 +105,14 @@ perf_common <- function(x = config_pivot, geom)
     guides(col = guide_legend(override.aes = list(size = 3)), fill = 'none') +
     geom +
     geom_hline(yintercept = 0)
+
+TEXT_DATASETS <- c('urls', 'wiki')
+INT_DATASETS <- c('ints', 'sparse', 'sparse64')
+
+safe_max <- function(x) {
+  finite <- x[is.finite(x)]
+  if (length(finite)) max(finite) else NA_real_
+}
 
 
 d|>
@@ -212,13 +228,15 @@ save_as('prefix-speedup', h = 30)
 {
 
   space_plot <- function(left) {
-    data_filter <- if (left) { c('urls', 'wiki') }else { c('ints', 'sparse') }
-    config_pivot|>
-      filter(op == 'ycsb_c', data_name %in% data_filter)|>
+    data_filter <- if (left) { TEXT_DATASETS }else { INT_DATASETS }
+    plot_data <- config_pivot|>
+      filter(op == 'ycsb_c', data_name %in% data_filter)
+    if (!nrow(plot_data)) return(plot_spacer())
+    plot_data|>
       ggplot() +
       theme_bw() +
       geom_col(aes(x = data_name, y = 1 - node_count_prefix / node_count_baseline, fill = data_name)) +
-      scale_fill_manual(palette = function(x) brewer_pal(palette = 'Dark2')(4)[(3:4) - left * 2]) +
+      scale_fill_manual(values = brewer_pal(palette = 'Dark2')(4)[(3:4) - left * 2]) +
       guides(fill = 'none') +
       scale_y_continuous(labels = label_percent(), expand = expansion(mult = 0),limits = c(0,0.7)) +
       scale_x_discrete(limits = {
@@ -273,13 +291,15 @@ save_as('prefix-space-tall', 18,40)
 {
 
   space_plot <- function(left) {
-    data_filter <- if (left) { c('urls', 'wiki') }else { c('ints', 'sparse') }
-    config_pivot|>
-      filter(op == 'ycsb_c', data_name %in% data_filter)|>
+    data_filter <- if (left) { TEXT_DATASETS }else { INT_DATASETS }
+    plot_data <- config_pivot|>
+      filter(op == 'ycsb_c', data_name %in% data_filter)
+    if (!nrow(plot_data)) return(plot_spacer())
+    plot_data|>
       ggplot() +
       theme_bw() +
       geom_col(aes(x = data_name, y = node_count_heads / node_count_prefix - 1, fill = data_name)) +
-      scale_fill_manual(palette = function(x) brewer_pal(palette = 'Dark2')(4)[(3:4) - left * 2]) +
+      scale_fill_manual(values = brewer_pal(palette = 'Dark2')(4)[(3:4) - left * 2]) +
       guides(fill = 'none') +
       scale_y_continuous(labels = label_percent(), expand = expansion(mult = 0),limits = c(0,0.25), breaks = (0:10) * 0.1) +
       scale_x_discrete(limits = {
@@ -354,15 +374,17 @@ save_as('heads-space-tall', 18,40)
   #   labs(x = NULL, y = NULL)+
   #   geom_col(aes(x = data_name, y = (node_count_heads-node_count_prefix)*4096/data_size, fill = data_name))
 
-  (separator_misery + relative) & theme(plot.margin = margin(3, 5, 0, 5))
+  if (exists('separator_misery')) {
+    separator_misery + relative
+  } else {
+    relative
+  } & theme(plot.margin = margin(3, 5, 0, 5))
 
   save_as('heads-space', 25)
 }
 
 
 config_pivot|>
-
-  config_pivot|>
   filter(op == 'ycsb_c')|>
   mutate(d = node_count_heads * 4096 / final_key_count_heads - node_count_prefix * 4096 / final_key_count_prefix)|>
   select(d, data_name)
@@ -432,14 +454,14 @@ d|>count(op, data_name, config_name)|>glimpse()
 
 d|>
   filter(config_name %in% c('heads', 'prefix'))|>
-  filter(data_name %in% c('ints', 'sparse'))|>
+  filter(data_name %in% INT_DATASETS)|>
   ggplot() +
   facet_nested(config_name ~ .) +
   geom_freqpoly(aes(x = leaf_count * 4096 / final_key_count, col = data_name))
 
 d|>
   filter(config_name == 'heads')|>
-  filter(data_name %in% c('ints', 'sparse'))|>
+  filter(data_name %in% INT_DATASETS)|>
   select(data_name, leaf_count)|>
   arrange(data_name, leaf_count)|>
   View()
@@ -780,7 +802,7 @@ d|>
 
 
 #integer separators
-perf_common(config_pivot|>filter(op %in% COMMON_OPS, data_name %in% c('ints', 'sparse')), geom_col(aes(x = op, y = txs_inner / txs_hints - 1, fill = op))) +
+perf_common(config_pivot|>filter(op %in% COMMON_OPS, data_name %in% INT_DATASETS), geom_col(aes(x = op, y = txs_inner / txs_hints - 1, fill = op))) +
   facet_nested(. ~ data_name, labeller = labeller(
     op = OP_LABELS,
     data_name = DATA_LABELS,
@@ -789,7 +811,7 @@ perf_common(config_pivot|>filter(op %in% COMMON_OPS, data_name %in% c('ints', 's
 save_as('inner-speedup', 20)
 
 d|>
-  filter(config_name == 'inner', op == 'ycsb_c', data_name %in% c('ints', 'sparse'), nodeCount_Inner > 0)|>
+  filter(config_name == 'inner', op == 'ycsb_c', data_name %in% INT_DATASETS, nodeCount_Inner > 0)|>
   View()
 
 d|>
@@ -830,9 +852,10 @@ config_pivot|>
 
 # in-memory
 
-in_mem_plot <- function(show_op, configs) {
+in_mem_plot <- function(show_op, configs = ALL_CONFIGS) {
 
   make_plot <- function(data) {
+    if (!nrow(data)) return(plot_spacer())
     data|>
       group_by(config_name, op, data_name)|>
       summarise(txs = median(txs) / 1e6)|>
@@ -878,7 +901,7 @@ in_mem_plot <- function(show_op, configs) {
   op_data <- d|>
     filter(config_name %in% names(configs))|>
     filter(op %in% show_op)|>
-    mutate(text = data_name %in% c('urls', 'wiki'))
+    mutate(text = data_name %in% TEXT_DATASETS)
   no_facet <- theme(
     strip.background.y = element_blank(),
     strip.text.y = element_blank()
@@ -958,7 +981,7 @@ config_pivot|>
   filter(op == 'insert90')|>
   select(txs_wh, data_name)|>
   pivot_wider(names_from = 'data_name', values_from = 'txs_wh')|>
-  mutate(x = ints / sparse)
+  mutate(x = if (all(c('ints', 'sparse') %in% names(pick(everything())))) ints / sparse else NA_real_)
 
 {
   colors <- c(
@@ -966,10 +989,12 @@ config_pivot|>
     brewer_pal(palette = 'Dark2')(6)[c(2,4,6,5,1)]
   )
 
-  f <- function(data_filter, art)
-    d|>
+  f <- function(data_filter, art) {
+    plot_data <- d|>
       filter(config_name %in% c('baseline', 'adapt2', 'art', 'hot', 'tlx', 'wh','lits'), op %in% c('ycsb_c', 'insert90', 'scan'))|>
-      filter(data_name %in% data_filter)|>
+      filter(data_name %in% data_filter)
+    if (!nrow(plot_data)) return(plot_spacer())
+    plot_data|>
       ggplot() +
       theme_bw() +
       facet_nested(. ~ data_name + op, scales = 'free', labeller = labeller(
@@ -1001,10 +1026,11 @@ config_pivot|>
       scale_y_continuous(breaks = (0:10) * if (art) { 3 }else { 1 }, expand = expansion(mult = c(0, 0.05))) +
       scale_x_manual(values = (1:8), labels = c('Base', 'Adapt', 'ART', 'HOT', 'TLX', 'WH','LITS')) +
       coord_cartesian(xlim = c(1, 7))
+  }
 
-  (f(c('urls', 'wiki'), FALSE) |
+  (f(TEXT_DATASETS, FALSE) |
     plot_spacer() |
-    f(c('ints', 'sparse'), TRUE)) +
+    f(INT_DATASETS, TRUE)) +
     plot_layout(guides = 'collect', widths = c(1, 0.01, 1)) &
     theme(legend.position = 'bottom', plot.margin = margin(0, 0, 0, 2))
 }
@@ -1017,10 +1043,12 @@ save_as('mem-txs', 35, w = 180)
     brewer_pal(palette = 'Dark2')(6)[c(2,4,6,5,1)]
   )
 
-  f <- function(data_filter, art)
-    d|>
+  f <- function(data_filter, art) {
+    plot_data <- d|>
       filter(config_name %in% c('baseline', 'adapt2', 'art', 'hot', 'tlx', 'wh','lits'), op %in% c('ycsb_c', 'insert90', 'scan'))|>
-      filter(data_name %in% data_filter)|>
+      filter(data_name %in% data_filter)
+    if (!nrow(plot_data)) return(plot_spacer())
+    plot_data|>
       ggplot() +
       theme_bw() +
       facet_nested(. ~ data_name + op, scales = 'free', labeller = labeller(
@@ -1046,8 +1074,9 @@ save_as('mem-txs', 35, w = 180)
       scale_y_continuous(breaks = (0:10) * if (art) { 3 }else { 1 }, expand = expansion(mult = c(0, 0.05))) +
       scale_x_manual(values = (1:8), labels = c('Base', 'Adapt', 'ART', 'HOT', 'TLX', 'WH','LITS')) +
       coord_cartesian(xlim = c(1, 7))
+  }
 
-  (f(c('urls', 'wiki'), FALSE) / f(c('ints', 'sparse'), TRUE)) +
+  (f(TEXT_DATASETS, FALSE) / f(INT_DATASETS, TRUE)) +
     plot_layout(guides = 'collect', widths = c(1, 0.01, 1)) &
     theme(legend.position = 'bottom', plot.margin = margin(0, 0, 0, 2))
 }
@@ -1111,7 +1140,7 @@ config_pivot|>
   )) +
   scale_y_continuous(labels = label_percent(suffix = ''),
                       expand = expansion(mult = 0.1),
-                     breaks = function(x)(-10:10) * ifelse(max(x) > 2, 1, 0.2)
+                     breaks = function(x)(-10:10) * ifelse(isTRUE(safe_max(x) > 2), 1, 0.2)
   ) +
   scale_x_discrete(labels = OP_LABELS, expand = expansion(add = 0.1)) +
   coord_cartesian(xlim = c(0.4, 3.6)) +
@@ -1142,6 +1171,11 @@ config_pivot|>
   expand_limits(y = 0.06)
 save_as('adapt-perf', 30)
 
+if (!any(is.finite(config_pivot$txs_dense3)) || !any(is.finite(config_pivot$txs_hash))) {
+  message("Skipping remaining adapt comparison plots because dense3/hash reference data is incomplete.")
+  quit(status = 0)
+}
+
 # absolute
 config_pivot|>
   filter(op %in% COMMON_OPS)|>
@@ -1156,7 +1190,7 @@ config_pivot|>
     data_name = DATA_LABELS,
     reference_name = CONFIG_LABELS,
   )) +
-  scale_y_continuous(expand = expansion(mult = c(0, 0.1)), breaks = function(x)(0:10) * ifelse(max(x) > 6, 2, 1)) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.1)), breaks = function(x)(0:10) * ifelse(isTRUE(safe_max(x) > 6), 2, 1)) +
   scale_x_manual(values = c(1, 3, 2), labels = c('adapt2' = 'Adapt', 'hash' = 'FP', 'dense3' = 'Dense'), expand = expansion(add = 0.1)) +
   theme(
     strip.text = element_text(size = 8, margin = margin(2, 1, 2, 1)),
@@ -1414,6 +1448,3 @@ adapt <-
 
   lits_train_size|>transmute(ratio = lits2/lits)|>pull()|>reciprocal()|>mean()|>reciprocal()
 }
-
-
-

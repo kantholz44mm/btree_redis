@@ -7,7 +7,7 @@ def print_work(data, config, id, ycsb, psl, psi, sl=100, op=int(1e7), pl=8,densi
         f'env DATA={data[0]} KEY_COUNT={data[1]} YCSB_VARIANT={ycsb} SCAN_LENGTH={sl} RUN_ID={id} OP_COUNT={op} PAYLOAD_SIZE={pl} ZIPF=0.99 DENSITY={density} {path}')
 
 
-for run_id in range(10):
+for run_id in range(1):
     d=['int', 4411764]
     for density_i in range(10,101):
         for var_size_b in range(8, 16):

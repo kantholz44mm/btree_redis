@@ -3,7 +3,7 @@ def print_work(data, config, id, ycsb, psl, psi, sl=100, op=int(1e7), pl=8):
     print(f'env DATA={data[0]} KEY_COUNT={data[1]} YCSB_VARIANT={ycsb} SCAN_LENGTH={sl} RUN_ID={id} OP_COUNT={op} PAYLOAD_SIZE={pl} ZIPF=0.99 DENSITY=1 {path}')
 
 
-for run_id in range(3):
+for run_id in range(1):
     for workload in [3, 5]:
         for config in ["baseline", "dense1", "dense2", "dense3", "hash", "heads", "hints", "inner", "prefix"]:
             for d in [['int', 25_000_000], ['rng4', 25_000_000], ['data/urls-short', 3766956], ['data/wiki', 13816679]]:

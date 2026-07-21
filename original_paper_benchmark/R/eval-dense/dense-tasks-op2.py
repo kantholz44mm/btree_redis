@@ -9,7 +9,7 @@ for run_id in range(1):
                 for d in [['rng4',25_000_000],['data/urls-short',3766956],['data/wiki',13816679]]:
                     print_work(d,config,run_id,6)
 
-for run_id in range(10):
+for run_id in range(1):
     for partitions in sorted(list({int(100*1.1**i) for i in range(0,170)})):
         for config in ['dense3','hints']:
             print_work(['partitioned_id',int(1e7)],config,run_id,402,sl=partitions,op=0)
