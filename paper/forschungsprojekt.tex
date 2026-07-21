@@ -14,6 +14,7 @@
 \usepackage[utf8]{inputenc}
 \usepackage{subcaption}
 \usepackage{siunitx}
+\usepackage[hidelinks]{hyperref}
 
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
@@ -30,33 +31,121 @@ Furtwangen, Germany}
 \maketitle
 
 \begin{abstract}
-Lorem ipsum dolor sit amet consectetur adipiscing elit. Quisque faucibus ex sapien vitae pellentesque sem placerat. In id cursus mi pretium tellus duis convallis. Tempus leo eu aenean sed diam urna tempor. Pulvinar vivamus fringilla lacus nec metus bibendum egestas. Iaculis massa nisl malesuada lacinia integer nunc posuere. Ut hendrerit semper vel class aptent taciti sociosqu. Ad litora torquent per conubia nostra inceptos himenaeos.
+B\textsuperscript{+}-trees have long been considered inferior to hash-based structures for
+in-memory workloads. Recent work on optimized node layouts argues that this gap is largely
+an artifact of the implementation rather than of the data structure itself.
+We restructured the authors' reference implementation into a reusable static library and
+attempted to reproduce their measurements.
+This succeeded only in part: the datasets are described but not distributed, benchmarks
+against self-generated substitutes crashed, and even after obtaining the original
+datasets our absolute throughput still deviates by orders of magnitude, though the
+qualitative trends hold.
+On this basis we implemented a Redis-compatible key-value store speaking the Redis
+Serialization Protocol. Under an identical YCSB2 load it becomes competitive on read
+throughput beyond roughly \num{500000} keys and sustains a growing advantage on range
+scans, where ordered key storage removes the need for the auxiliary sorted sets Redis
+requires.
 \end{abstract}
-
-\vspace{10pt}
 
 \begin{IEEEkeywords}
 B-Trees, In-Memory Database, Key-Value Store, Memory Layout
 \end{IEEEkeywords}
 
 \section{Introduction and Motivation}
+
+B\textsuperscript{+}-trees are among the most fundamental index structures in database systems,
+but were long considered inferior for in-memory scenarios: systems such as Redis rely on
+hash-based structures with near-constant latency per access.
+The paper \emph{``B-trees are back: Engineering fast and pageable node layouts''}
+by Müller, Benson and Leis~\cite{muller2025b} shows that this is primarily an artifact
+of the implementation. Through multiple node types, fingerprinting, hinting,
+prefix compression and SIMD acceleration, B\textsuperscript{+}-trees reach a throughput
+comparable to the Adaptive Radix Tree~(ART) and the Height Optimized Trie~(HOT).
+If this holds, the preference for hash-based indexes in in-memory systems rests on
+implementation history rather than on a property of the structures, and an ordered
+index becomes viable where an unordered one is normally assumed -- bringing range
+queries along at no additional cost.
+
 \section{Analysis and Setup of the Existing Repository}
+
+The code accompanying the paper is publicly available on GitHub, but was strongly tailored
+to one specific compiler environment. SIMD intrinsics were embedded directly as AVX2 code,
+the build system consisted of a hand-written, monolithic Makefile, and dependencies such
+as TLX had to be placed into the source tree by hand before the project would compile.
+In this state the code is hard to build outside the authors' environment.
+
+We therefore restructured the repository into a static library (\texttt{libbtree}).
+The build system was migrated to CMake, which resolves dependencies automatically and
+makes the benchmark programs separate targets, and the code was updated to compile
+cleanly under current compilers.
+The AVX2 intrinsics were moved behind a narrow internal abstraction that separates the
+vectorized search from the node layout code.
+This is a structural change rather than a portability one: the vectorized paths remain
+x86-specific, and no backend for another instruction set was implemented.
+A uniform \texttt{DataStructureWrapper} interface exposes the tree operations, which is
+what the key-value store in \autoref{sec:impl} builds on.
+
 \section{Reproduction of Benchmark Results}
+
+The benchmarks of the paper are driven by Python scripts that invoke the benchmarking
+programs with parameters such as key count, operation count and batch size, store the
+results as CSV, and visualize them in R. The datasets used were dense and sparse
+integer keys, Wikipedia article titles and randomly generated URLs.
+All measurements were taken on a virtual machine hosted in the university datacenter,
+backed by an AMD EPYC~7702P (64~cores) and provisioned with 4~vCPUs, \SI{64}{\giga\byte}
+of RAM and a single NUMA node.
+Each core has \SI{64}{\kibi\byte} of L1 and \SI{512}{\kibi\byte} of L2 cache, alongside
+\SI{64}{\mebi\byte} of shared L3; the system runs Debian~13 with kernel~7.0.4.
+The benchmark workload is synchronous and single-threaded and therefore executes on one
+core, with dedicated cores and memory ruling out contention from co-located tenants.
+This setup nevertheless differs from the bare-metal machine of the original publication,
+which must be kept in mind when comparing absolute numbers.
+We compiled with a newer compiler version, but deliberately kept the optimization and
+architecture flags from the original Makefile unchanged.
+
+Reproducing the results proved considerably more laborious than expected.
+The datasets are only described in prose and are not included in the repository, so we
+first regenerated them from those descriptions.
+Benchmarks run against these self-generated datasets crashed reproducibly, and the cause
+could not be determined from the code alone, suggesting that the inputs depend on
+properties the description does not capture.
+Not all figures could be unambiguously attributed to a benchmark script either, so the
+exact configuration behind a published curve sometimes had to be guessed.
+
+After we got in touch with the authors, we were provided with the original datasets.
+This removed the crashes and reduced the discrepancies, but did not eliminate them:
+our absolute throughput values still deviate from the published ones, in places by
+orders of magnitude.
+The qualitative behaviour, however, is preserved -- the relative ordering of the data
+structures and the shape of the curves over growing key counts match, so the paper's
+conclusions are not contradicted by our runs, only their absolute scale is.
+We cannot attribute the remaining gap to a single cause: the virtualized hardware, the
+residual differences between our regenerated and the original datasets, and the newer
+toolchain all plausibly contribute and cannot be cleanly separated after the fact.
+We therefore report the deviation as unresolved.
+
 \section{Implementation of a Key-Value Store Based on B-Trees}
+\label{sec:impl}
 
-Based on the B\textsuperscript{+}-tree implementation, a Redis-compatible key-value store was built.
-As the first step, serialization and deserialization of the Redis Serialization Protocol (RESP) was implemented (Version 2).
-RESP uses a text-based encoding and features data types such as strings, integers and arrays.
-These values are sent over a TCP-Connection using Boost.Asio.
-The server parses incoming commands and processes the requests on libbtree accordingly.
-Implemented commands include most basic key-value commands (\texttt{GET}, \texttt{SET}, \texttt{MGET}, \texttt{MSET}, \texttt{DEL}),
+Based on \texttt{libbtree}, a Redis-compatible key-value store was built.
+The first step was serialization and deserialization of the Redis Serialization Protocol
+(RESP, Version 2), a text-based encoding featuring strings, integers and arrays.
+These values are sent over a TCP connection using Boost.Asio; the server parses incoming
+commands and processes the requests on \texttt{libbtree} accordingly.
+Implemented commands include most basic key-value commands (\texttt{GET}, \texttt{SET}, \texttt{MGET},
+\texttt{MSET}, \texttt{DEL}, \texttt{EXISTS}, \texttt{INCR}/\texttt{DECR} and \texttt{INFO}),
 as well as an experimental adaptation of sorted set operations from redis (\texttt{ZADD}, \texttt{ZRANGE}).
+Since the protocol is implemented faithfully, the resulting server~\cite{btree_redis2026}
+can be used as a drop-in replacement for Redis.
 
-To now compare Redis with this custom implementation, the YCSB2 program was adapted to use a Redis client instead of direct B-Tree operations.
-This allows benchmarking against Redis and the B-Tree implementation by running both servers in the local network.
-The insertion and retrieval of keys now uses batched \texttt{MGET} and \texttt{MSET} commands.
-Each command does 10000 operations at once to minimize network overhead.
-The amount of time for a set number of operations is then measured.
+To compare both systems, the YCSB2 program was adapted to use a Redis client instead of
+direct B-Tree operations, so that an identical load can be directed at either server over
+the local network.
+All measurements use Workload~C, consisting of \SI{100}{\percent} read accesses drawn from
+a Zipf distribution.
+Insertion and retrieval use batched \texttt{MGET} and \texttt{MSET} commands of 10000
+operations each to minimize network overhead, and the time for a set number of operations
+is measured.
 
 \autoref{fig:benchmark-get} shows the throughput of \texttt{MGET} commands with different database sizes.
 Starting at about \num{500000} keys in the database, the system using B-Trees gets competitive.
@@ -70,10 +159,10 @@ From here, it stays almost completely flat, while the B-Tree performance is stil
     \label{fig:benchmark-get}
 \end{figure}
 
-A structural advantage of B\textsuperscript{+}-Trees is their ordered key storage.
-This allows range-scans without additional datastructures.
-In a hash-based datastructure, this is not possible.
-This is where Redis uses sorted sets to provide this functionality.
+A structural advantage of B\textsuperscript{+}-Trees is their ordered key storage, which
+allows range scans without additional data structures.
+This is not possible in a hash-based structure, which is why Redis provides this
+functionality through sorted sets.
 
 \autoref{fig:benchmark-range-scan} shows the throughput of \texttt{ZRANGE} commands with different database sizes.
 With very small key counts, both perform very similar.
@@ -83,12 +172,26 @@ The steep gradient of redis flattens at this point and increases very similarly 
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=\linewidth]{img/redis_get_benchmark}
+    \includegraphics[width=\linewidth]{img/redis_range_scan_benchmark}
     \caption{Throughput of range scans for B-Tree vs.\ Redis by database size.}
     \label{fig:benchmark-range-scan}
 \end{figure}
 
 \section{Conclusion}
+
+Beyond disk-based databases, the optimized B\textsuperscript{+}-trees described in the paper
+are a solid foundation for competitive in-memory key-value stores.
+Our Redis-compatible store shows this concretely: it reaches competitive read throughput
+on sufficiently large datasets, and its ordered key storage gives it a structural
+advantage on range scans that a hash-based store can only match by maintaining an
+additional index.
+
+The reproduction was the more instructive part of the project.
+Published code alone did not suffice; the datasets, the machine configuration and an
+unambiguous mapping from figures to scripts were needed as well, and only the first of
+these could be recovered, by contacting the authors directly.
+In a field where performance claims are the primary contribution, experimental artifacts
+deserve the same care in publication as the source code.
 
 \nocite{*}
 \bibliographystyle{IEEEtran}
