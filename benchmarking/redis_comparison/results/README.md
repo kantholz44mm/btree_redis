@@ -1,0 +1,1 @@
+This folder contains the results of successful redis comparison benchmarks executed on the VM.

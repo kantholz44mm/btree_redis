@@ -110,3 +110,7 @@ perf script > out.perf
 ## Adjusting benchmark targets
 
 The `ops` argument to the benchmarking scripts is a comma seperated list of database names, which are defined in [get_port_for_db in ycsb2.py](ycsb2.py).
+
+## Results from the VM
+
+Selected results from benchmarks on the VM can be found [here](./results).
