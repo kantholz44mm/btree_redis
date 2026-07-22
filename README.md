@@ -19,7 +19,8 @@ We have subfolders for each "part" of the implementation. Each subfolder has its
     Adjusted copy of the YCSB2 C++ program from the original paper for benchmarking against the redis_client
   - **redis_comparison**
     Python scripts for running specific benchmarks with the adjusted ycsb2 for redis
-
+- **original_paper_benchmark**
+    Contains a modified copy of the [original paper's repository](https://github.com/m-mueller678/btree-cpp/tree/sigmod25) with adjustments to run on modern Linux systems.
 ## How to build:
 
 ```
