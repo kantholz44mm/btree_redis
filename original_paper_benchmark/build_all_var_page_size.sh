@@ -1,0 +1,19 @@
+#!/bin/bash
+
+printf "%s\n" \
+"-DPS_I=256 -DPS_L=4096" \
+"-DPS_I=512 -DPS_L=4096" \
+"-DPS_I=1024 -DPS_L=4096" \
+"-DPS_I=2048 -DPS_L=4096" \
+"-DPS_I=4096 -DPS_L=256" \
+"-DPS_I=4096 -DPS_L=512" \
+"-DPS_I=4096 -DPS_L=1024" \
+"-DPS_I=4096 -DPS_L=2048" \
+"-DPS_I=4096 -DPS_L=4096" \
+"-DPS_I=4096 -DPS_L=8192" \
+"-DPS_I=4096 -DPS_L=16384" \
+"-DPS_I=4096 -DPS_L=32768" \
+"-DPS_I=8192 -DPS_L=4096" \
+"-DPS_I=16384 -DPS_L=4096" \
+"-DPS_I=32768 -DPS_L=4096" \
+| ./build_var_page_size.sh

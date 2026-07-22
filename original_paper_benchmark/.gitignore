@@ -1,0 +1,14 @@
+*~
+**/.idea
+*.elf
+/named-build/
+/page-size-builds/
+/hot-*.o
+/lits-*.o
+/tlx_build_n3/
+/tlx_build_d0/
+/libwh.so
+/joblog*
+.codex
+.agents
+.venv
